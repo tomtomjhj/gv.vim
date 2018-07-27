@@ -243,9 +243,11 @@ endfunction
 
 function! s:log_opts(fugitive_repo, bang, visual, line1, line2)
   if a:visual || a:bang
-    let current = expand('%')
-    call s:check_buffer(a:fugitive_repo, current)
-    return a:visual ? [printf('-L%d,%d:%s', a:line1, a:line2, current)] : ['--follow', current]
+    let g:gv_file = expand('%')
+    call s:check_buffer(a:fugitive_repo, g:gv_file)
+    return a:visual ? [printf('-L%d,%d:%s', a:line1, a:line2, g:gv_file)] : ['--follow', g:gv_file]
+  else
+    let g:gv_file = ''
   endif
   return ['--graph']
 endfunction
@@ -268,7 +270,13 @@ function! s:list(fugitive_repo, log_opts)
   call s:maps()
   call s:syntax()
   redraw
-  echo 'o: open split / O: open tab / gb: Gbrowse / q: quit'
+  if !empty(g:gv_file)
+    nnoremap <silent> <buffer> <nowait> S    :call gv#sbs#show()<cr>
+    echohl Label | echo g:gv_file."\t"
+    echohl None  | echon 'o: open split / O: open tab / gb: Gbrowse / q: quit / S: show revision'
+  else
+    echo 'o: open split / O: open tab / gb: Gbrowse / q: quit'
+  endif
 endfunction
 
 function! s:trim(arg)
