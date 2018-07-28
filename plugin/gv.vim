@@ -165,28 +165,31 @@ function! s:syntax()
 endfunction
 
 function! s:maps()
-  nnoremap <silent> <buffer> q    :$wincmd w <bar> close<cr>
-  nnoremap <silent> <buffer> gb   :call <sid>gbrowse()<cr>
-  nnoremap <silent> <buffer> <cr> :call <sid>open(0)<cr>
-  nnoremap <silent> <buffer> o    :call <sid>open(0)<cr>
-  nnoremap <silent> <buffer> O    :call <sid>open(0, 1)<cr>
-  xnoremap <silent> <buffer> <cr> :<c-u>call <sid>open(1)<cr>
-  xnoremap <silent> <buffer> o    :<c-u>call <sid>open(1)<cr>
-  xnoremap <silent> <buffer> O    :<c-u>call <sid>open(1, 1)<cr>
-  nnoremap          <buffer> <expr> .  <sid>dot()
-  nnoremap <silent> <buffer> <expr> ]] <sid>move('')
-  nnoremap <silent> <buffer> <expr> ][ <sid>move('')
-  nnoremap <silent> <buffer> <expr> [[ <sid>move('b')
-  nnoremap <silent> <buffer> <expr> [] <sid>move('b')
-  xnoremap <silent> <buffer> <expr> ]] <sid>move('')
-  xnoremap <silent> <buffer> <expr> ][ <sid>move('')
-  xnoremap <silent> <buffer> <expr> [[ <sid>move('b')
-  xnoremap <silent> <buffer> <expr> [] <sid>move('b')
+  nnoremap <silent> <nowait> <buffer> q    :$wincmd w <bar> bdelete!<cr>
+  nnoremap <silent> <nowait> <buffer> gb   :call <sid>gbrowse()<cr>
+  nnoremap <silent> <nowait> <buffer> <cr> :call <sid>open(0)<cr>
+  nnoremap <silent> <nowait> <buffer> o    :call <sid>open(0)<cr>
+  nnoremap <silent> <nowait> <buffer> O    :call <sid>open(0, 1)<cr>
+  xnoremap <silent> <nowait> <buffer> <cr> :<c-u>call <sid>open(1)<cr>
+  xnoremap <silent> <nowait> <buffer> o    :<c-u>call <sid>open(1)<cr>
+  xnoremap <silent> <nowait> <buffer> O    :<c-u>call <sid>open(1, 1)<cr>
+  nnoremap          <nowait> <buffer> <expr> .  <sid>dot()
+  nnoremap          <nowait> <buffer> <expr> ~  gv#tilde()
+  nnoremap <silent> <nowait> <buffer> <expr> ]] <sid>move('')
+  nnoremap <silent> <nowait> <buffer> <expr> ][ <sid>move('')
+  nnoremap <silent> <nowait> <buffer> <expr> [[ <sid>move('b')
+  nnoremap <silent> <nowait> <buffer> <expr> [] <sid>move('b')
+  xnoremap <silent> <nowait> <buffer> <expr> ]] <sid>move('')
+  xnoremap <silent> <nowait> <buffer> <expr> ][ <sid>move('')
+  xnoremap <silent> <nowait> <buffer> <expr> [[ <sid>move('b')
+  xnoremap <silent> <nowait> <buffer> <expr> [] <sid>move('b')
+  nnoremap <silent> <nowait> <buffer>        [z :<c-u>call gv#folds(0)<cr>
+  nnoremap <silent> <nowait> <buffer>        ]z :<c-u>call gv#folds(1)<cr>
 
-  nmap              <buffer> <C-n> ]]o
-  nmap              <buffer> <C-p> [[o
-  xmap              <buffer> <C-n> ]]ogv
-  xmap              <buffer> <C-p> [[ogv
+  nmap              <nowait> <buffer> <C-n> ]]o
+  nmap              <nowait> <buffer> <C-p> [[o
+  xmap              <nowait> <buffer> <C-n> ]]ogv
+  xmap              <nowait> <buffer> <C-p> [[ogv
 endfunction
 
 function! s:setup(git_dir, git_origin)

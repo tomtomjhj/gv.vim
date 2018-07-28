@@ -43,6 +43,7 @@ selected lines.
 - `gb` for `:Gbrowse`
 - `]]` and `[[` to move between commits
 - `.` to start command-line with `:Git [CURSOR] SHA` à la fugitive
+- `~` to set GitGutter diff base to the commit
 - `q` to close
 
 Customization
