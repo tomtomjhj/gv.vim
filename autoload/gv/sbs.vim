@@ -7,24 +7,24 @@ function! gv#sbs#show()
     let s:comm_msg2 = system('git log -1 --pretty=format:%s '.s:sha)
     normal! gg
     let latest = gv#sha()
-
-    if s:sha == latest
-        echohl WarningMsg | echo "Not with latest revision." | echohl None
-        return
-    endif
+    let is_latest = s:sha == latest
 
     let s:comm_msg1 = system('git log -1 --pretty=format:%s '.latest)
     exe "normal! \<C-o>"
+    " close gv buffer
+    normal q
 
     "open current file in a new tab
-    exe "tabedit ".g:gv_file
+    exe "tabedit" g:gv_file
     let synt = &ft
 
-    "replace the real file with the HEAD revision
-    exe "Git! show HEAD:".g:gv_file
-    let &ft = synt
-    exe "f ".s:fname(s:comm_msg1)
-    call s:maps()
+    "replace the real file with the HEAD revision, if not the latest revision
+    if !is_latest
+        exe "Git! show HEAD:".g:gv_file
+        let &ft = synt
+        exe "f ".s:fname(s:comm_msg1)
+        call s:maps()
+    endif
 
     "open revision in a split and set it ready for diff/scrollbind
     vsplit
@@ -36,7 +36,8 @@ function! gv#sbs#show()
     call s:maps()
     exe "normal! \<C-w>h\<C-w>="
 
-    call s:msg()
+    if is_latest | call s:msg(1)
+    else         | call s:msg() | endif
 endfunction
 
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
