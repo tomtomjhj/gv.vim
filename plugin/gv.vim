@@ -39,6 +39,12 @@ function! s:move(flag)
   return l ? printf('%dG%d|', l, c) : ''
 endfunction
 
+function! s:scroll(flag)
+  let d = a:flag == 'f' ? "\<c-d>" : "\<c-u>"
+  let w = "\<c-w>\<c-w>"
+  return len(tabpagebuflist()) == 1 ? d : w.d.w
+endfunction
+
 function! s:browse(url)
   call netrw#BrowseX(b:git_origin.a:url, 0)
 endfunction
@@ -165,26 +171,28 @@ function! s:syntax()
 endfunction
 
 function! s:maps()
-  nnoremap <silent> <nowait> <buffer> q    :$wincmd w <bar> bdelete!<cr>
-  nnoremap <silent> <nowait> <buffer> gb   :call <sid>gbrowse()<cr>
-  nnoremap <silent> <nowait> <buffer> <cr> :call <sid>open(0)<cr>
-  nnoremap <silent> <nowait> <buffer> o    :call <sid>open(0)<cr>
-  nnoremap <silent> <nowait> <buffer> O    :call <sid>open(0, 1)<cr>
-  xnoremap <silent> <nowait> <buffer> <cr> :<c-u>call <sid>open(1)<cr>
-  xnoremap <silent> <nowait> <buffer> o    :<c-u>call <sid>open(1)<cr>
-  xnoremap <silent> <nowait> <buffer> O    :<c-u>call <sid>open(1, 1)<cr>
-  nnoremap          <nowait> <buffer> <expr> .  <sid>dot()
-  nnoremap          <nowait> <buffer> <expr> ~  gv#tilde()
-  nnoremap <silent> <nowait> <buffer> <expr> ]] <sid>move('')
-  nnoremap <silent> <nowait> <buffer> <expr> ][ <sid>move('')
-  nnoremap <silent> <nowait> <buffer> <expr> [[ <sid>move('b')
-  nnoremap <silent> <nowait> <buffer> <expr> [] <sid>move('b')
-  xnoremap <silent> <nowait> <buffer> <expr> ]] <sid>move('')
-  xnoremap <silent> <nowait> <buffer> <expr> ][ <sid>move('')
-  xnoremap <silent> <nowait> <buffer> <expr> [[ <sid>move('b')
-  xnoremap <silent> <nowait> <buffer> <expr> [] <sid>move('b')
-  nnoremap <silent> <nowait> <buffer>        [z :<c-u>call gv#folds(0)<cr>
-  nnoremap <silent> <nowait> <buffer>        ]z :<c-u>call gv#folds(1)<cr>
+  nnoremap <silent> <nowait> <buffer>        q          :$wincmd w <bar> bdelete!<cr>
+  nnoremap <silent> <nowait> <buffer>        gb         :call <sid>gbrowse()<cr>
+  nnoremap <silent> <nowait> <buffer>        <cr>       :call <sid>open(0)<cr>
+  nnoremap <silent> <nowait> <buffer>        o          :call <sid>open(0)<cr>
+  nnoremap <silent> <nowait> <buffer>        O          :call <sid>open(0, 1)<cr>
+  nnoremap <silent> <nowait> <buffer> <expr> <c-f>      <sid>scroll('f')
+  nnoremap <silent> <nowait> <buffer> <expr> <c-b>      <sid>scroll('b')
+  xnoremap <silent> <nowait> <buffer>        <cr>       :<c-u>call <sid>open(1)<cr>
+  xnoremap <silent> <nowait> <buffer>        o          :<c-u>call <sid>open(1)<cr>
+  xnoremap <silent> <nowait> <buffer>        O          :<c-u>call <sid>open(1, 1)<cr>
+  nnoremap          <nowait> <buffer> <expr> .          <sid>dot()
+  nnoremap          <nowait> <buffer> <expr> ~          gv#tilde()
+  nnoremap <silent> <nowait> <buffer> <expr> ]]         <sid>move('')
+  nnoremap <silent> <nowait> <buffer> <expr> ][         <sid>move('')
+  nnoremap <silent> <nowait> <buffer> <expr> [[         <sid>move('b')
+  nnoremap <silent> <nowait> <buffer> <expr> []         <sid>move('b')
+  xnoremap <silent> <nowait> <buffer> <expr> ]]         <sid>move('')
+  xnoremap <silent> <nowait> <buffer> <expr> ][         <sid>move('')
+  xnoremap <silent> <nowait> <buffer> <expr> [[         <sid>move('b')
+  xnoremap <silent> <nowait> <buffer> <expr> []         <sid>move('b')
+  nnoremap <silent> <nowait> <buffer>        [z         :<c-u>call gv#folds(0)<cr>
+  nnoremap <silent> <nowait> <buffer>        ]z         :<c-u>call gv#folds(1)<cr>
 
   nmap              <nowait> <buffer> <C-n> ]]o
   nmap              <nowait> <buffer> <C-p> [[o
