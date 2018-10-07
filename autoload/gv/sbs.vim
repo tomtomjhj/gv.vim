@@ -3,7 +3,7 @@ function! gv#sbs#show()
     let s:sha = gv#sha()
     let s:gv_tab = tabpagenr()
 
-    "get commit messages, but return if latest revision
+    "get commit messages
     let s:comm_msg2 = system('git log -1 --pretty=format:%s '.s:sha)
     normal! gg
     let latest = gv#sha()
@@ -32,6 +32,7 @@ function! gv#sbs#show()
     exe "Git! show ".s:sha.":".g:gv_file
     let &ft = synt
     exe "f ".s:fname(s:comm_msg2)
+    autocmd BufEnter <buffer> call s:msg()
     diffthis
     call s:maps()
     exe "normal! \<C-w>h\<C-w>="
