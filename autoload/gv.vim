@@ -298,6 +298,8 @@ function! s:maps()
   nnoremap          <nowait> <buffer> <expr> ~          <sid>tilde()
   nnoremap <silent> <nowait> <buffer> <expr> j          <sid>move('')
   nnoremap <silent> <nowait> <buffer> <expr> k          <sid>move('b')
+  nnoremap <silent> <nowait> <buffer> <expr> ]]         <sid>move('')
+  nnoremap <silent> <nowait> <buffer> <expr> [[         <sid>move('b')
   xnoremap <silent> <nowait> <buffer> <expr> ]          <sid>move('')
   xnoremap <silent> <nowait> <buffer> <expr> [          <sid>move('b')
   nnoremap <silent> <nowait> <buffer>        [z         :<c-u>call <sid>folds(0)<cr>
@@ -368,13 +370,9 @@ function! <sid>folds(down)
   endif
   wincmd l
   if a:down
-    if foldlevel('.') > 0 | silent! normal! zczj
-    else                  | silent! normal! zj
-    endif                 | silent! normal! zo
+    silent! normal! zczjzo[z
   else
-    if foldlevel('.') > 0 | silent! normal! zczkzkzj
-    else                  | silent! normal! zkzkzj
-    endif                 | silent! normal! zo[z
+    silent! normal! zczkzo[z
   endif
   wincmd h
   silent! exe "normal! z\<cr>"
