@@ -25,3 +25,4 @@ function! s:gvcomplete(a, l, p) abort
 endfunction
 
 command! -bang -nargs=* -range=0 -complete=customlist,s:gvcomplete GV call gv#start(<bang>0, <count>, <line1>, <line2>, <q-args>)
+command! -bang                                                     GS call gs#start(<bang>0)
