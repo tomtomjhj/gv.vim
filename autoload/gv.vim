@@ -219,9 +219,10 @@ function! s:open(visual, ...)
     setf diff
   endif
   nnoremap <silent> <nowait> <buffer>        q          :$wincmd w <bar> bdelete!<cr>
+  nnoremap <silent> <nowait> <buffer>        <leader>q  :$wincmd w <bar> bdelete!<cr>
   nnoremap <silent> <nowait> <buffer>        <tab>      <c-w><c-w>
-  nnoremap <silent> <nowait> <buffer>        [z         :<c-u>call <sid>folds(0)<cr>
-  nnoremap <silent> <nowait> <buffer>        ]z         :<c-u>call <sid>folds(1)<cr>
+  nnoremap <silent> <nowait> <buffer>        [          :<c-u>call <sid>folds(0)<cr>
+  nnoremap <silent> <nowait> <buffer>        ]          :<c-u>call <sid>folds(1)<cr>
   let bang = a:0 ? '!' : ''
   if exists('#User#GV'.bang)
     execute 'doautocmd <nomodeline> User GV'.bang
@@ -286,6 +287,7 @@ endfunction
 
 function! s:maps()
   nnoremap <silent> <nowait> <buffer>        q          :$wincmd w <bar> bdelete!<cr>
+  nnoremap <silent> <nowait> <buffer>        <leader>q  :$wincmd w <bar> bdelete!<cr>
   nnoremap <silent> <nowait> <buffer>        <tab>      <c-w><c-w>
   nnoremap <silent> <nowait> <buffer>        gb         :call <sid>gbrowse()<cr>
   nnoremap <silent> <nowait> <buffer>        <cr>       :call <sid>open(0)<cr>
@@ -298,12 +300,8 @@ function! s:maps()
   nnoremap          <nowait> <buffer> <expr> ~          <sid>tilde()
   nnoremap <silent> <nowait> <buffer> <expr> j          <sid>move('')
   nnoremap <silent> <nowait> <buffer> <expr> k          <sid>move('b')
-  nnoremap <silent> <nowait> <buffer> <expr> ]]         <sid>move('')
-  nnoremap <silent> <nowait> <buffer> <expr> [[         <sid>move('b')
-  xnoremap <silent> <nowait> <buffer> <expr> ]          <sid>move('')
-  xnoremap <silent> <nowait> <buffer> <expr> [          <sid>move('b')
-  nnoremap <silent> <nowait> <buffer>        [z         :<c-u>call <sid>folds(0)<cr>
-  nnoremap <silent> <nowait> <buffer>        ]z         :<c-u>call <sid>folds(1)<cr>
+  nnoremap <silent> <nowait> <buffer>        [          :<c-u>call <sid>folds(0)<cr>
+  nnoremap <silent> <nowait> <buffer>        ]          :<c-u>call <sid>folds(1)<cr>
 
   nmap              <nowait> <buffer> <C-n> jo
   nmap              <nowait> <buffer> <C-p> ko
@@ -364,6 +362,7 @@ function! s:tilde()
 endfunction
 
 function! <sid>folds(down)
+  let changed_win = tabpagewinnr(tabpagenr()) == 1
   if len(tabpagebuflist()) == 1 || exists('s:moved')
     silent! unlet s:moved
     normal o
@@ -374,8 +373,10 @@ function! <sid>folds(down)
   else
     silent! normal! zczkzo[z
   endif
-  wincmd h
   silent! exe "normal! z\<cr>"
+  if changed_win
+    wincmd h
+  endif
 endfunction
 
 "------------------------------------------------------------------------------

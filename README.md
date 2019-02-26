@@ -39,11 +39,13 @@ selected lines.
 - `o` or `<cr>` on a commit to display the content of it
 - `o` or `<cr>` on commits to display the diff in the range
 - `O` opens a new tab instead
-- `S` (GV! only) to open revision in a new tab, side-by-side with current file
 - `gb` for `:Gbrowse`
-- `]]` and `[[` to move between commits
+- `Tab` to switch window
+- `j` and `k` to move between commits
+- `]` and `[` to browse folds in the second window
 - `.` to start command-line with `:Git [CURSOR] SHA` à la fugitive
 - `~` to set GitGutter diff base to the commit
+- `S` (GV! only) to open revision in a new tab, side-by-side with current file
 - `q` to close
 
 Customization

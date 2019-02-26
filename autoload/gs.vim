@@ -133,7 +133,8 @@ function! s:syntax()
 endfunction
 
 function! s:maps()
-  nnoremap <silent> <nowait> <buffer>        q          :$wincmd w <bar> bdelete!<cr>
+  nnoremap <silent> <nowait> <buffer>        q          :$wincmd l <bar> bdelete!<cr>
+  nnoremap <silent> <nowait> <buffer>        <leader>q  :$wincmd l <bar> bdelete!<cr>
   nnoremap <silent> <nowait> <buffer>        <tab>      <c-w><c-w>
   nnoremap <silent> <nowait> <buffer>        <cr>       :call <sid>open()<cr>
   nnoremap <silent> <nowait> <buffer>        o          :call <sid>open()<cr>
@@ -142,8 +143,8 @@ function! s:maps()
   nnoremap <silent> <nowait> <buffer>        P          :call <sid>do('pop')<cr>
   nnoremap <silent> <nowait> <buffer>        A          :call <sid>do('apply')<cr>
   nnoremap <silent> <nowait> <buffer>        B          :call <sid>to_branch()<cr>
-  nnoremap <silent> <nowait> <buffer>        [z         :<c-u>call <sid>folds(0)<cr>
-  nnoremap <silent> <nowait> <buffer>        ]z         :<c-u>call <sid>folds(1)<cr>
+  nnoremap <silent> <nowait> <buffer>        [          :<c-u>call <sid>folds(0)<cr>
+  nnoremap <silent> <nowait> <buffer>        ]          :<c-u>call <sid>folds(1)<cr>
 endfunction
 
 "------------------------------------------------------------------------------
@@ -175,10 +176,12 @@ function! s:open(...)
   call s:fill(system('git stash show -p '.sha))
   setf git
   set foldmethod=syntax
+  normal! zm
   nnoremap <silent> <nowait> <buffer>        q          :$wincmd w <bar> bdelete!<cr>
+  nnoremap <silent> <nowait> <buffer>        <leader>q  :$wincmd w <bar> bdelete!<cr>
   nnoremap <silent> <nowait> <buffer>        <tab>      <c-w><c-w>
-  nnoremap <silent> <nowait> <buffer>        [z         :<c-u>call <sid>folds(0)<cr>
-  nnoremap <silent> <nowait> <buffer>        ]z         :<c-u>call <sid>folds(1)<cr>
+  nnoremap <silent> <nowait> <buffer>        [          :<c-u>call <sid>folds(0)<cr>
+  nnoremap <silent> <nowait> <buffer>        ]          :<c-u>call <sid>folds(1)<cr>
   let bang = a:0 ? '!' : ''
   if exists('#User#GV'.bang)
     execute 'doautocmd <nomodeline> User GV'.bang
