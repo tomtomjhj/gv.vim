@@ -130,7 +130,7 @@ function! s:list(fugitive_repo, log_opts)
   call s:syntax()
   redraw
   if exists('g:gv_file')
-    nnoremap <silent> <buffer> <nowait> d :call gv#sbs#show()<cr>
+    nnoremap <silent> <buffer> <nowait> d :call gv#sbs#show()<cr><c-l>
     echohl Label | echo g:gv_file."\t"
     echohl None  | echon 'o: open split / O: open tab / q: quit / d: diff / g?: help'
   else
@@ -303,8 +303,8 @@ function! s:maps()
   nnoremap <silent> <nowait> <buffer>        [          :<c-u>call <sid>folds(0)<cr>
   nnoremap <silent> <nowait> <buffer>        ]          :<c-u>call <sid>folds(1)<cr>
   nnoremap <silent> <nowait> <buffer>        yy         0WW"+ye:echo 'sha' gv#sha() 'copied'<cr>
-  nnoremap <silent> <nowait> <buffer>        i          :<c-u>call <sid>show_changes(1)<cr>
-  nnoremap <silent> <nowait> <buffer>        s          :<c-u>call <sid>show_changes(0)<cr>
+  nnoremap <silent> <nowait> <buffer>        i          :<c-u>call <sid>show_summary(1)<cr>
+  nnoremap <silent> <nowait> <buffer>        s          :<c-u>call <sid>show_summary(0)<cr>
   nnoremap <silent> <nowait> <buffer>        g?         :<c-u>call <sid>show_help()<cr>
 
   nmap              <nowait> <buffer> <C-n> jo
@@ -365,7 +365,7 @@ function! s:tilde()
   call s:warn('GitGutter diff base set to commit '.sha)
 endfunction
 
-function! s:show_changes(diff)
+function! s:show_summary(diff)
   pclose!
   let sha = gv#sha()
   let changes = systemlist('git log --stat -1 '.sha)
@@ -453,3 +453,10 @@ function! s:tabnew()
   execute (tabpagenr()-1).'tabnew'
 endfunction
 
+function! s:is_summary_open()
+  for nr in range(1, winnr('$'))
+    if getwinvar(nr, "&pvw")
+      return 1
+    endif
+  endfor
+endfunction

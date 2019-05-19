@@ -36,6 +36,7 @@ selected lines.
 
 ### Mappings
 
+- `g?` for help
 - `o` or `<cr>` on a commit to display the content of it
 - `o` or `<cr>` on commits to display the diff in the range
 - `O` opens a new tab instead
@@ -45,7 +46,10 @@ selected lines.
 - `]` and `[` to browse folds in the second window
 - `.` to start command-line with `:Git [CURSOR] SHA` à la fugitive
 - `~` to set GitGutter diff base to the commit
-- `S` (GV! only) to open revision in a new tab, side-by-side with current file
+- `s` to show the commit summary in a preview window
+- `i` to open both summary and diff panels
+- `d` (GV! only) to diff the revision in a new tab
+- `yy` to copy sha to clipboard
 - `q` to close
 
 Customization
