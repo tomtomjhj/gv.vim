@@ -130,11 +130,11 @@ function! s:list(fugitive_repo, log_opts)
   call s:syntax()
   redraw
   if exists('g:gv_file')
-    nnoremap <silent> <buffer> <nowait> S    :call gv#sbs#show()<cr>
+    nnoremap <silent> <buffer> <nowait> d :call gv#sbs#show()<cr>
     echohl Label | echo g:gv_file."\t"
-    echohl None  | echon 'o: open split / O: open tab / gb: Gbrowse / q: quit / S: show revision'
+    echohl None  | echon 'o: open split / O: open tab / q: quit / d: diff / g?: help'
   else
-    echo 'o: open split / O: open tab / gb: Gbrowse / q: quit'
+    echo 'o: open split / O: open tab / q: quit / g?: help'
   endif
 endfunction
 
@@ -218,9 +218,9 @@ function! s:open(visual, ...)
     call s:fill(target)
     setf diff
   endif
-  nnoremap <silent> <nowait> <buffer>        q          :$wincmd w <bar> bdelete!<cr>
-  nnoremap <silent> <nowait> <buffer>        <leader>q  :$wincmd w <bar> bdelete!<cr>
-  nnoremap <silent> <nowait> <buffer>        <tab>      <c-w><c-w>
+  nnoremap <silent> <nowait> <buffer>        q          :$wincmd w <bar> bdelete!<cr>:pclose!<cr>
+  nnoremap <silent> <nowait> <buffer>        <leader>q  :$wincmd w <bar> bdelete!<cr>:pclose!<cr>
+  nnoremap <silent> <nowait> <buffer>        <tab>      <c-w><c-h>
   nnoremap <silent> <nowait> <buffer>        [          :<c-u>call <sid>folds(0)<cr>
   nnoremap <silent> <nowait> <buffer>        ]          :<c-u>call <sid>folds(1)<cr>
   let bang = a:0 ? '!' : ''
@@ -286,9 +286,9 @@ function! s:syntax()
 endfunction
 
 function! s:maps()
-  nnoremap <silent> <nowait> <buffer>        q          :$wincmd w <bar> bdelete!<cr>
-  nnoremap <silent> <nowait> <buffer>        <leader>q  :$wincmd w <bar> bdelete!<cr>
-  nnoremap <silent> <nowait> <buffer>        <tab>      <c-w><c-w>
+  nnoremap <silent> <nowait> <buffer>        q          :$wincmd w <bar> bdelete!<cr>:pclose!<cr>
+  nnoremap <silent> <nowait> <buffer>        <leader>q  :$wincmd w <bar> bdelete!<cr>:pclose!<cr>
+  nnoremap <silent> <nowait> <buffer>        <tab>      <c-w><c-l>
   nnoremap <silent> <nowait> <buffer>        gb         :call <sid>gbrowse()<cr>
   nnoremap <silent> <nowait> <buffer>        <cr>       :call <sid>open(0)<cr>
   nnoremap <silent> <nowait> <buffer>        o          :call <sid>open(0)<cr>
@@ -302,6 +302,10 @@ function! s:maps()
   nnoremap <silent> <nowait> <buffer> <expr> k          <sid>move('b')
   nnoremap <silent> <nowait> <buffer>        [          :<c-u>call <sid>folds(0)<cr>
   nnoremap <silent> <nowait> <buffer>        ]          :<c-u>call <sid>folds(1)<cr>
+  nnoremap <silent> <nowait> <buffer>        yy         0WW"+ye:echo 'sha' gv#sha() 'copied'<cr>
+  nnoremap <silent> <nowait> <buffer>        i          :<c-u>call <sid>show_changes(1)<cr>
+  nnoremap <silent> <nowait> <buffer>        s          :<c-u>call <sid>show_changes(0)<cr>
+  nnoremap <silent> <nowait> <buffer>        g?         :<c-u>call <sid>show_help()<cr>
 
   nmap              <nowait> <buffer> <C-n> jo
   nmap              <nowait> <buffer> <C-p> ko
@@ -361,7 +365,51 @@ function! s:tilde()
   call s:warn('GitGutter diff base set to commit '.sha)
 endfunction
 
-function! <sid>folds(down)
+function! s:show_changes(diff)
+  pclose!
+  let sha = gv#sha()
+  let changes = systemlist('git log --stat -1 '.sha)
+  let n = len(changes)
+  exe n.'new'
+  setlocal bt=nofile bh=wipe noswf nobl
+  silent put =changes
+  1d _
+  setfiletype git
+  set previewwindow
+  let b:sha = sha
+  nnoremap <buffer><nowait><silent> q     :bw!<cr>
+  nmap     <buffer><nowait><silent> <tab> <c-w><c-w>
+  wincmd p
+  if a:diff
+    normal o]
+  endif
+endfunction
+
+function! s:show_help() abort
+  echo 'q'     . "\t\tquit"
+  echo '<tab>' . "\t\tchange window"
+  echo '<cr>'  . "\t\tshow diff panel"
+  echo 'o'     . "\t\tshow diff panel"
+  echo 'O'     . "\t\topen in new tab"
+  echo '.'     . "\t\t:Git | sha"
+  echo '~'     . "\t\tset gitgutter_diff_base to commit"
+  echo '['     . "\t\tprevious fold in side window"
+  echo ']'     . "\t\tnext fold in side window"
+  echo 'yy'    . "\t\tcopy commit hash"
+  if exists('g:gv_file')
+    echo 'd'   . "\t\tdiff with current"
+  endif
+  echo 's'     . "\t\tshow preview panel"
+  echo 'i'     . "\t\tshow preview and diff panels"
+  echo 'gb'    . "\t\tGbrowse"
+  echo '<C-n>' . "\t\topen next"
+  echo '<C-p>' . "\t\topen previous"
+  echo '<cr>'  . "\t\t[V] open"
+  echo 'o'     . "\t\t[V] open"
+  echo 'O'     . "\t\t[V] open in new tab"
+endfunction
+
+function! s:folds(down)
   let changed_win = tabpagewinnr(tabpagenr()) == 1
   if len(tabpagebuflist()) == 1 || exists('s:moved')
     silent! unlet s:moved
