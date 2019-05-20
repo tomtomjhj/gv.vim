@@ -122,6 +122,7 @@ function! s:list(fugitive_repo, log_opts)
 
   call s:fill(git_log_cmd)
   setlocal nowrap tabstop=8 cursorline iskeyword+=#
+  let s:windows = {'diff': 0, 'summary': 0, 'moved': [0,0]}
 
   if !exists(':Gbrowse')
     doautocmd <nomodeline> User Fugitive
@@ -218,8 +219,8 @@ function! s:open(visual, ...)
     call s:fill(target)
     setf diff
   endif
-  nnoremap <silent> <nowait> <buffer>        q          :$wincmd w <bar> bdelete!<cr>:pclose!<cr>
-  nnoremap <silent> <nowait> <buffer>        <leader>q  :$wincmd w <bar> bdelete!<cr>:pclose!<cr>
+  nnoremap <silent> <nowait> <buffer>        q          :call <sid>quit()<cr>
+  nnoremap <silent> <nowait> <buffer>        <leader>q  :call <sid>quit()<cr>
   nnoremap <silent> <nowait> <buffer>        <tab>      <c-w><c-h>
   nnoremap <silent> <nowait> <buffer>        [          :<c-u>call <sid>folds(0)<cr>
   nnoremap <silent> <nowait> <buffer>        ]          :<c-u>call <sid>folds(1)<cr>
@@ -227,6 +228,7 @@ function! s:open(visual, ...)
   if exists('#User#GV'.bang)
     execute 'doautocmd <nomodeline> User GV'.bang
   endif
+  let s:windows.diff = 1
   wincmd p
   echo
 endfunction
@@ -286,8 +288,8 @@ function! s:syntax()
 endfunction
 
 function! s:maps()
-  nnoremap <silent> <nowait> <buffer>        q          :$wincmd w <bar> bdelete!<cr>:pclose!<cr>
-  nnoremap <silent> <nowait> <buffer>        <leader>q  :$wincmd w <bar> bdelete!<cr>:pclose!<cr>
+  nnoremap <silent> <nowait> <buffer>        q          :call <sid>quit()<cr>
+  nnoremap <silent> <nowait> <buffer>        <leader>q  :call <sid>quit()<cr>
   nnoremap <silent> <nowait> <buffer>        <tab>      <c-w><c-l>
   nnoremap <silent> <nowait> <buffer>        gb         :call <sid>gbrowse()<cr>
   nnoremap <silent> <nowait> <buffer>        <cr>       :call <sid>open(0)<cr>
@@ -366,7 +368,13 @@ function! s:tilde()
 endfunction
 
 function! s:show_summary(diff)
-  pclose!
+  if s:windows.summary
+    pclose!
+    if !s:windows.moved[1]
+      return
+    endif
+    let s:windows.moved[1] = 0
+  endif
   let sha = gv#sha()
   let changes = systemlist('git log --stat -1 '.sha)
   let n = len(changes)
@@ -376,11 +384,16 @@ function! s:show_summary(diff)
   1d _
   setfiletype git
   set previewwindow
+  let s:windows.summary = 1
   let b:sha = sha
-  nnoremap <buffer><nowait><silent> q     :bw!<cr>
+  nnoremap <buffer><nowait><silent> q     :pclose!<cr>
   nmap     <buffer><nowait><silent> <tab> <c-w><c-w>
-  wincmd p
+  au BufUnload <buffer> let s:windows.summary = 0
+  1wincmd w
   if a:diff
+    if s:windows.diff
+      call s:quit()
+    endif
     normal o]
   endif
 endfunction
@@ -410,20 +423,30 @@ function! s:show_help() abort
 endfunction
 
 function! s:folds(down)
-  let changed_win = tabpagewinnr(tabpagenr()) == 1
-  if len(tabpagebuflist()) == 1 || exists('s:moved')
-    silent! unlet s:moved
+  let was_diff_win = s:windows.diff && winnr() == winnr('$')
+  if s:windows.moved[0] && s:windows.diff
+    $wincmd w
+    bdelete!
+    let s:windows.diff = 0
+  endif
+  if s:windows.moved[1] && s:windows.summary
+    1wincmd w
+    normal s
+  endif
+  let s:windows.moved = [0,0]
+  if !s:windows.diff
+    1wincmd w
     normal o
   endif
-  wincmd l
+  $wincmd w
   if a:down
     silent! normal! zczjzo[z
   else
     silent! normal! zczkzo[z
   endif
   silent! exe "normal! z\<cr>"
-  if changed_win
-    wincmd h
+  if !was_diff_win
+    1wincmd w
   endif
 endfunction
 
@@ -439,8 +462,21 @@ function! s:shrug()
   call s:warn('¯\_(ツ)_/¯')
 endfunction
 
+function! s:quit()
+  if s:windows.diff
+    $wincmd w
+    bdelete!
+    let s:windows.diff = 0
+  elseif s:windows.summary
+    pclose!
+    let s:windows.summary = 0
+  else
+    bdelete!
+  endif
+endfunction
+
 function! s:move(flag)
-  let s:moved = 1
+  let s:windows.moved = [ s:windows.diff, s:windows.summary ]
   let [l, c] = searchpos(s:begin, a:flag)
   return l ? printf('%dG%d|', l, c) : ''
 endfunction
