@@ -113,7 +113,7 @@ function! s:create_gv_buffer(fugitive_repo, log_opts)
 
   call s:fill(git_log_cmd)
   setlocal nowrap tabstop=8 cursorline iskeyword+=#
-  let s:windows = {'diff': 0, 'summary': 0, 'moved': [0,0]}
+  let s:windows = {'diff': 0, 'summary': 0}
 
   if !exists(':Gbrowse')
     doautocmd <nomodeline> User Fugitive
@@ -162,6 +162,9 @@ function! s:open(visual, ...)
   let s:windows.diff = 1
   wincmd p
   echo
+  if s:windows.summary
+    call s:show_summary(0, 0)
+  endif
 endfunction
 
 "------------------------------------------------------------------------------
@@ -236,8 +239,8 @@ function! s:maps()
   nnoremap <silent> <nowait> <buffer>        [          :<c-u>call <sid>folds(0)<cr>
   nnoremap <silent> <nowait> <buffer>        ]          :<c-u>call <sid>folds(1)<cr>
   nnoremap <silent> <nowait> <buffer>        yy         0WW"+ye:echo 'sha' gv#sha() 'copied'<cr>
-  nnoremap <silent> <nowait> <buffer>        i          :<c-u>call <sid>show_summary(1)<cr>
-  nnoremap <silent> <nowait> <buffer>        s          :<c-u>call <sid>show_summary(0)<cr>
+  nnoremap <silent> <nowait> <buffer>        i          :<c-u>call <sid>show_summary(1, 0)<cr>
+  nnoremap <silent> <nowait> <buffer>        s          :<c-u>call <sid>show_summary(0, 1)<cr>
   nnoremap <silent> <nowait> <buffer>        g?         :<c-u>call <sid>show_help()<cr>
 
   nmap              <nowait> <buffer> <C-n> jo
@@ -298,13 +301,18 @@ function! s:tilde()
   call s:warn('GitGutter diff base set to commit '.sha)
 endfunction
 
-function! s:show_summary(diff)
+function! s:show_summary(diff, toggle)
+  if a:diff
+    if s:windows.diff
+      call s:quit()
+    endif
+    normal o]
+  endif
   if s:windows.summary
     pclose!
-    if !s:windows.moved[1]
+    if a:toggle
       return
     endif
-    let s:windows.moved[1] = 0
   endif
   let sha = gv#sha()
   let changes = systemlist('git log --stat -1 '.sha)
@@ -321,12 +329,6 @@ function! s:show_summary(diff)
   nmap     <buffer><nowait><silent> <tab> <c-w><c-w>
   au BufUnload <buffer> let s:windows.summary = 0
   1wincmd w
-  if a:diff
-    if s:windows.diff
-      call s:quit()
-    endif
-    normal o]
-  endif
 endfunction
 
 function! s:show_help() abort
@@ -355,16 +357,6 @@ endfunction
 
 function! s:folds(down)
   let was_diff_win = s:windows.diff && winnr() == winnr('$')
-  if s:windows.moved[0] && s:windows.diff
-    $wincmd w
-    bdelete!
-    let s:windows.diff = 0
-  endif
-  if s:windows.moved[1] && s:windows.summary
-    1wincmd w
-    normal s
-  endif
-  let s:windows.moved = [0,0]
   if !s:windows.diff
     1wincmd w
     normal o
@@ -394,20 +386,21 @@ function! s:shrug()
 endfunction
 
 function! s:quit()
+  if s:windows.summary
+    pclose!
+    let s:windows.summary = 0
+  endif
+
   if s:windows.diff
     $wincmd w
     bdelete!
     let s:windows.diff = 0
-  elseif s:windows.summary
-    pclose!
-    let s:windows.summary = 0
   else
     bdelete!
   endif
 endfunction
 
 function! s:move(flag)
-  let s:windows.moved = [ s:windows.diff, s:windows.summary ]
   let [l, c] = searchpos(s:begin, a:flag)
   return l ? printf('%dG%d|', l, c) : ''
 endfunction
@@ -418,14 +411,6 @@ endfunction
 
 function! s:tabnew()
   execute (tabpagenr()-1).'tabnew'
-endfunction
-
-function! s:is_summary_open()
-  for nr in range(1, winnr('$'))
-    if getwinvar(nr, "&pvw")
-      return 1
-    endif
-  endfor
 endfunction
 
 function! s:shellwords(arg)
