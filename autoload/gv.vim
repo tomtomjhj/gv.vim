@@ -31,11 +31,11 @@ function! gv#start(bang, visual, line1, line2, args) abort
         return s:warn('invalid arguments')
       endif
       call s:check_buffer(fugitive_repo, expand('%'))
-      call s:gl(bufnr(''), a:visual)
+      call s:to_location_list(bufnr(''), a:visual)
     else
-      let log_opts = extend(gv#shellwords(a:args), s:log_opts(fugitive_repo, a:bang, a:visual, a:line1, a:line2))
+      let log_opts = extend(s:shellwords(a:args), s:log_opts(fugitive_repo, a:bang, a:visual, a:line1, a:line2))
       call s:setup(git_dir, fugitive_repo.config('remote.origin.url'))
-      call s:list(fugitive_repo, log_opts)
+      call s:create_gv_buffer(fugitive_repo, log_opts)
       call fugitive#detect(@#)
     endif
   catch
@@ -49,7 +49,7 @@ endfunction
 
 "------------------------------------------------------------------------------
 
-function! s:gl(buf, visual)
+function! s:to_location_list(buf, visual)
   if !exists(':Gllog')
     return
   endif
@@ -100,18 +100,9 @@ function! s:setup(git_dir, git_origin)
   let b:git_dir = a:git_dir
 endfunction
 
-function! s:log_opts(fugitive_repo, bang, visual, line1, line2)
-  if a:visual || a:bang
-    let g:gv_file = expand('%')
-    call s:check_buffer(a:fugitive_repo, g:gv_file)
-    return a:visual ? [printf('-L%d,%d:%s', a:line1, a:line2, g:gv_file)] : ['--follow', g:gv_file]
-  else
-    silent! unlet g:gv_file
-  endif
-  return ['--graph']
-endfunction
+"------------------------------------------------------------------------------
 
-function! s:list(fugitive_repo, log_opts)
+function! s:create_gv_buffer(fugitive_repo, log_opts)
   let default_opts = ['--color=never', '--date=short', '--format=%cd %h%d %s (%an)']
   let git_args = ['log'] + default_opts + a:log_opts
   let git_log_cmd = call(a:fugitive_repo.git_command, git_args, a:fugitive_repo)
@@ -139,67 +130,7 @@ function! s:list(fugitive_repo, log_opts)
   endif
 endfunction
 
-function! s:trim(arg)
-  let arg = substitute(a:arg, '\s*$', '', '')
-  return arg =~ "^'.*'$" ? substitute(arg[1:-2], "''", '', 'g')
-        \ : arg =~ '^".*"$' ? substitute(substitute(arg[1:-2], '""', '', 'g'), '\\"', '"', 'g')
-        \ : substitute(substitute(arg, '""\|''''', '', 'g'), '\\ ', ' ', 'g')
-endfunction
-
-function! gv#shellwords(arg)
-  let words = []
-  let contd = 0
-  for token in split(a:arg, '\%(\%(''\%([^'']\|''''\)\+''\)\|\%("\%(\\"\|[^"]\)\+"\)\|\%(\%(\\ \|\S\)\+\)\)\s*\zs')
-    let trimmed = s:trim(token)
-    if contd
-      let words[-1] .= trimmed
-    else
-      call add(words, trimmed)
-    endif
-    let contd = token !~ '\s\+$'
-  endfor
-  return words
-endfunction
-
 "------------------------------------------------------------------------------
-
-function! s:type(visual)
-  if a:visual
-    let shas = filter(map(getline("'<", "'>"), 'gv#sha(v:val)'), '!empty(v:val)')
-    if len(shas) < 2
-      return [0, 0]
-    endif
-    return ['diff', fugitive#repo().git_command('diff', shas[-1], shas[0])]
-  endif
-
-  if exists('b:git_origin')
-    let syn = synIDattr(synID(line('.'), col('.'), 0), 'name')
-    if syn == 'gvGitHub'
-      return ['link', '/issues/'.expand('<cword>')[1:]]
-    elseif syn == 'gvTag'
-      let tag = matchstr(getline('.'), '(tag: \zs[^ ,)]\+')
-      return ['link', '/releases/'.tag]
-    endif
-  endif
-
-  let sha = gv#sha()
-  if !empty(sha)
-    return ['commit', FugitiveFind(sha, b:git_dir)]
-  endif
-  return [0, 0]
-endfunction
-
-function! s:split(tab)
-  if a:tab
-    call s:tabnew()
-  elseif getwinvar(winnr('$'), 'gv')
-    $wincmd w
-    enew
-  else
-    vertical botright new
-  endif
-  let w:gv = 1
-endfunction
 
 function! s:open(visual, ...)
   let [type, target] = s:type(a:visual)
@@ -496,3 +427,75 @@ function! s:is_summary_open()
     endif
   endfor
 endfunction
+
+function! s:shellwords(arg)
+  let words = []
+  let contd = 0
+  for token in split(a:arg, '\%(\%(''\%([^'']\|''''\)\+''\)\|\%("\%(\\"\|[^"]\)\+"\)\|\%(\%(\\ \|\S\)\+\)\)\s*\zs')
+    let trimmed = s:trim(token)
+    if contd
+      let words[-1] .= trimmed
+    else
+      call add(words, trimmed)
+    endif
+    let contd = token !~ '\s\+$'
+  endfor
+  return words
+endfunction
+
+function! s:trim(arg)
+  let arg = substitute(a:arg, '\s*$', '', '')
+  return arg =~ "^'.*'$" ? substitute(arg[1:-2], "''", '', 'g')
+        \ : arg =~ '^".*"$' ? substitute(substitute(arg[1:-2], '""', '', 'g'), '\\"', '"', 'g')
+        \ : substitute(substitute(arg, '""\|''''', '', 'g'), '\\ ', ' ', 'g')
+endfunction
+
+function! s:log_opts(fugitive_repo, bang, visual, line1, line2)
+  if a:visual || a:bang
+    let g:gv_file = expand('%')
+    call s:check_buffer(a:fugitive_repo, g:gv_file)
+    return a:visual ? [printf('-L%d,%d:%s', a:line1, a:line2, g:gv_file)] : ['--follow', g:gv_file]
+  else
+    silent! unlet g:gv_file
+  endif
+  return ['--graph']
+endfunction
+
+function! s:type(visual)
+  if a:visual
+    let shas = filter(map(getline("'<", "'>"), 'gv#sha(v:val)'), '!empty(v:val)')
+    if len(shas) < 2
+      return [0, 0]
+    endif
+    return ['diff', fugitive#repo().git_command('diff', shas[-1], shas[0])]
+  endif
+
+  if exists('b:git_origin')
+    let syn = synIDattr(synID(line('.'), col('.'), 0), 'name')
+    if syn == 'gvGitHub'
+      return ['link', '/issues/'.expand('<cword>')[1:]]
+    elseif syn == 'gvTag'
+      let tag = matchstr(getline('.'), '(tag: \zs[^ ,)]\+')
+      return ['link', '/releases/'.tag]
+    endif
+  endif
+
+  let sha = gv#sha()
+  if !empty(sha)
+    return ['commit', FugitiveFind(sha, b:git_dir)]
+  endif
+  return [0, 0]
+endfunction
+
+function! s:split(tab)
+  if a:tab
+    call s:tabnew()
+  elseif getwinvar(winnr('$'), 'gv')
+    $wincmd w
+    enew
+  else
+    vertical botright new
+  endif
+  let w:gv = 1
+endfunction
+

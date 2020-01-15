@@ -10,12 +10,12 @@ endfunction
 
 function! gs#start(bang) abort
   if !exists('g:loaded_fugitive')
-    return s:warn('fugitive not found')
+    return s:gs_warn('fugitive not found')
   endif
 
   let git_dir = s:git_dir()
   if empty(git_dir)
-    return s:warn('not in git repo')
+    return s:gs_warn('not in git repo')
   endif
 
   let fugitive_repo = fugitive#repo(git_dir)
@@ -28,13 +28,13 @@ function! gs#start(bang) abort
     endif
     let cmd = system('git stash list --date=short '.shellescape('--format=%cd %h %s (%an)'))
     if empty(cmd)
-      return s:warn("No stashes for this repo")
+      return s:gs_warn("No stashes for this repo")
     endif
-    call s:setup(git_dir)
-    call s:list(fugitive_repo, cmd)
+    call s:gs_setup(git_dir)
+    call s:gs_list(fugitive_repo, cmd)
     call fugitive#detect(@#)
   catch
-    return s:warn(v:exception)
+    return s:gs_warn(v:exception)
   finally
     if getcwd() !=# cwd
       cd -
@@ -44,34 +44,34 @@ endfunction
 
 "------------------------------------------------------------------------------
 
-function! s:setup(git_dir)
-  call s:tabnew()
-  call s:scratch()
+function! s:gs_setup(git_dir)
+  call s:gs_tabnew()
+  call s:gs_scratch()
   let b:git_dir = a:git_dir
 endfunction
 
-function! s:list(fugitive_repo, cmd)
+function! s:gs_list(fugitive_repo, cmd)
   let repo_short_name = fnamemodify(substitute(a:fugitive_repo.dir(), '[\\/]\.git[\\/]\?$', '', ''), ':t')
   let bufname = repo_short_name.' Stashes'
   silent exe (bufexists(bufname) ? 'buffer' : 'file') fnameescape(bufname)
 
-  call s:fill(a:cmd)
+  call s:gs_fill(a:cmd)
   setlocal nowrap tabstop=8 cursorline iskeyword+=#
 
   " if !exists(':Gbrowse')
   "   doautocmd <nomodeline> User Fugitive
   " endif
-  call s:maps()
-  call s:syntax()
+  call s:gs_maps()
+  call s:gs_syntax()
   redraw
   echo 'o: open split / O: open tab / D: drop / A: apply / P: pop / q: quit'
 endfunction
 
 "------------------------------------------------------------------------------
 
-function! s:split(tab)
+function! s:gs_split(tab)
   if a:tab
-    call s:tabnew()
+    call s:gs_tabnew()
   elseif getwinvar(winnr('$'), 'gv_stash_diff', 0)
     $wincmd w
     enew
@@ -86,18 +86,18 @@ endfunction
 " Buffers {{{1
 "------------------------------------------------------------------------------
 
-function! s:scratch()
+function! s:gs_scratch()
   setlocal buftype=nofile bufhidden=wipe noswapfile
 endfunction
 
-function! s:fill(cmd)
+function! s:gs_fill(cmd)
   setlocal modifiable
   silent put = a:cmd
   normal! gg"_dd
   setlocal nomodifiable
 endfunction
 
-function! s:syntax()
+function! s:gs_syntax()
   setf GV
   syn clear
   syn match gvInfo    /^[^0-9]*\zs[0-9-]\+\s\+[a-f0-9]\+ / contains=gvDate,gvSha nextgroup=gvBranch,gvMeta
@@ -132,7 +132,7 @@ function! s:syntax()
   hi def link diffLine    Statement
 endfunction
 
-function! s:maps()
+function! s:gs_maps()
   nnoremap <silent> <nowait> <buffer>        q          :$wincmd l <bar> bdelete!<cr>
   nnoremap <silent> <nowait> <buffer>        <leader>q  :$wincmd l <bar> bdelete!<cr>
   nnoremap <silent> <nowait> <buffer>        <tab>      <c-w><c-w>
@@ -162,18 +162,18 @@ endfunction
 " Actions {{{1
 "------------------------------------------------------------------------------
 
-function! s:open(...)
+function! s:gs_open(...)
   let sha = gs#sha()
   if empty(sha)
-    return s:shrug()
+    return s:gs_shrug()
   endif
 
-  call s:split(a:0)
-  call s:scratch()
+  call s:gs_split(a:0)
+  call s:gs_scratch()
   silent put = system('git stash show '.sha)
   call append("$", '')
   normal! <ipG
-  call s:fill(system('git stash show -p '.sha))
+  call s:gs_fill(system('git stash show -p '.sha))
   setf git
   set foldmethod=syntax
   normal! zm
@@ -203,23 +203,23 @@ function! <sid>folds(down)
   if !diffwin | wincmd h | endif
 endfunction
 
-function! s:do(action)
+function! s:gs_do(action)
   let sha = gs#sha()
-  if s:confirm(a:action, sha)
-    call s:system(a:action, sha)
+  if s:gs_confirm(a:action, sha)
+    call s:gs_system(a:action, sha)
     if a:action != 'apply'
-      call s:quit()
+      call s:gs_quit()
     endif
   endif
 endfunction
 
-function! s:to_branch()
+function! s:gs_to_branch()
   let msg = 'Do you want to create a branch from the stash ' . gs#sha() . '?'
   if confirm(msg, "&Yes\n&No", 2) == 1
     let name = input('New branch name? ')
     if empty(name) | return | endif
-    call s:system('branch', name)
-    call s:quit()
+    call s:gs_system('branch', name)
+    call s:gs_quit()
   endif
 endfunction
 
@@ -227,29 +227,29 @@ endfunction
 " Helpers {{{1
 "------------------------------------------------------------------------------
 
-function! s:warn(message)
+function! s:gs_warn(message)
   echohl WarningMsg | echom a:message | echohl None
 endfunction
 
-function! s:shrug()
-  call s:warn('¯\_(ツ)_/¯')
+function! s:gs_shrug()
+  call s:gs_warn('¯\_(ツ)_/¯')
 endfunction
 
-function! s:tabnew()
+function! s:gs_tabnew()
   execute (tabpagenr()-1).'tabnew'
 endfunction
 
-function! s:confirm(cmd, sha)
+function! s:gs_confirm(cmd, sha)
   let msg = 'Do you want to ' . a:cmd . ' the stash ' . a:sha
   return confirm(msg, "&Yes\n&No", 2) == 1
 endfunction
 
-fun! s:system(cmd, sha)
+fun! s:gs_system(cmd, sha)
   echo "\n\n"
   e | echon system("git stash " . a:cmd . " " . a:sha)
 endfun
 
-fun! s:quit()
+fun! s:gs_quit()
   if len(tabpagebuflist()) == 1 && !exists('w:gv_stash_diff')
     normal q
   else
