@@ -13,7 +13,7 @@ function! gv#start(bang, visual, line1, line2, args) abort
     return s:warn('fugitive not found')
   endif
 
-  let git_dir = s:git_dir()
+  let git_dir = FugitiveGitDir()
   if empty(git_dir)
     return s:warn('not in git repo')
   endif
@@ -143,13 +143,13 @@ function! s:open(visual, ...)
   endif
 
   call s:split(a:0)
+  call s:scratch()
   if type == 'commit'
     execute 'e' escape(target, ' ')
     nnoremap <silent> <buffer> gb :Gbrowse<cr>
   elseif type == 'diff'
-    call s:scratch()
     call s:fill(target)
-    setf diff
+    setfiletype diff
   endif
   nnoremap <silent> <nowait> <buffer>        q          :call <sid>quit()<cr>
   nnoremap <silent> <nowait> <buffer>        <leader>q  :call <sid>quit()<cr>
@@ -253,13 +253,6 @@ endfunction
 "------------------------------------------------------------------------------
 " Git {{{1
 "------------------------------------------------------------------------------
-
-function! s:git_dir()
-  if empty(get(b:, 'git_dir', ''))
-    return fugitive#extract_git_dir(expand('%:p'))
-  endif
-  return b:git_dir
-endfunction
 
 function! s:tracked(fugitive_repo, file)
   call system(a:fugitive_repo.git_command('ls-files', '--error-unmatch', a:file))
