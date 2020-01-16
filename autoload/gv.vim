@@ -122,7 +122,8 @@ function! s:create_gv_buffer(fugitive_repo, log_opts)
   call s:syntax()
   redraw
   if exists('g:gv_file')
-    nnoremap <silent> <buffer> <nowait> d :call gv#sbs#show()<cr><c-l>
+    nnoremap <silent> <buffer> <nowait> d :call gv#sbs#show(0)<cr><c-l>
+    nnoremap <silent> <buffer> <nowait> D :call gv#sbs#show(1)<cr><c-l>
     echohl Label | echo g:gv_file."\t"
     echohl None  | echon 'o: open split / O: open tab / q: quit / d: diff / g?: help'
   else
@@ -344,6 +345,7 @@ function! s:show_help() abort
   echo 'yy'    . "\t\tcopy commit hash"
   if exists('g:gv_file')
     echo 'd'   . "\t\tdiff with current"
+    echo 'D'   . "\t\tdiff with current (load all commits)"
   endif
   echo 's'     . "\t\tshow preview panel"
   echo 'i'     . "\t\tshow preview and diff panels"

@@ -1,4 +1,4 @@
-function! gv#sbs#show()
+function! gv#sbs#show(all)
     if empty(g:gv_file) | return | endif
     let s:sha = gv#sha()
     let gv_tab = tabpagenr() - 1
@@ -14,13 +14,15 @@ function! gv#sbs#show()
     diffthis
 
     "open also other revisions
-    0Glog
-    buffer #
+    if a:all
+      0Glog
+      buffer #
+    endif
 
     "open revision in a split and set it ready for diff/scrollbind
     vsplit
     wincmd l
-    exe "Git! show ".s:sha.":".g:gv_file
+    exe "0Git! show" s:sha.":".tr(g:gv_file, '\', '/')
     setlocal bt=nofile bh=wipe noswf nobl noma
     let &ft = ft
     diffthis
