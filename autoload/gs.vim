@@ -4,10 +4,6 @@ let s:begin = '^[^0-9]*[0-9]\{4}-[0-9]\{2}-[0-9]\{2}\s\+'
 " Setup {{{1
 "------------------------------------------------------------------------------
 
-function! gs#sha(...)
-  return matchstr(get(a:000, 0, getline('.')), s:begin.'\zs[a-f0-9]\+')
-endfunction
-
 function! gs#start(bang) abort
   if !exists('g:loaded_fugitive')
     return s:gs_warn('fugitive not found')
@@ -26,7 +22,7 @@ function! gs#start(bang) abort
     if cwd !=# root
       execute cd escape(root, ' ')
     endif
-    let cmd = system('git stash list --date=short '.shellescape('--format=%cd %h %s (%an)'))
+    let cmd = system('git stash list '.shellescape('--format=%h %cr %gd %s (%an)'))
     if empty(cmd)
       return s:gs_warn("No stashes for this repo")
     endif
@@ -100,23 +96,21 @@ endfunction
 function! s:gs_syntax()
   setf GV
   syn clear
-  syn match gvInfo    /^[^0-9]*\zs[0-9-]\+\s\+[a-f0-9]\+ / contains=gvDate,gvSha nextgroup=gvBranch,gvMeta
-  syn match gvDate    /\S\+ / contained
-  syn match gvSha     /[a-f0-9]\{6,}/ contained
-  syn match gvMessage /.* \ze(.\{-})$/ contained contains=gvBranch nextgroup=gvAuthor
-  syn match gvAuthor  /.*$/ contained
-  syn match gvMeta    /([^)]\+) / contained nextgroup=gvMessage
-  syn match gvBranch  /On .*:/ nextgroup=gvMessage
-  hi def link gvDate   Number
-  hi def link gvSha    Identifier
-  hi def link gvBranch Label
-  hi def link gvMeta   Conditional
-  hi def link gvAuthor String
+  syn match gsSha     /^[a-f0-9]\{6,}/ nextgroup=gsDate
+  syn match gsDate    /.\{-}\zestash@/ contained nextgroup=gsStash
+  syn match gsStash   /stash@{\d\+}/ nextgroup=gsMessage
+  syn match gsMessage /.* \ze(.\{-})$/ contained nextgroup=gsAuthor
+  syn match gsAuthor  /.*$/ contained
+  hi def link gsDate   Number
+  hi def link gsSha    Identifier
+  hi def link gsStash  Label
+  hi def link gsMeta   Conditional
+  hi def link gsAuthor String
 
-  syn match gvAdded     "^\W*\zsA\t.*"
-  syn match gvDeleted   "^\W*\zsD\t.*"
-  hi def link gvAdded    diffAdded
-  hi def link gvDeleted  diffRemoved
+  syn match gsAdded     "^\W*\zsA\t.*"
+  syn match gsDeleted   "^\W*\zsD\t.*"
+  hi def link gsAdded    diffAdded
+  hi def link gsDeleted  diffRemoved
 
   syn match diffAdded   "^+.*"
   syn match diffRemoved "^-.*"
@@ -136,15 +130,16 @@ function! s:gs_maps()
   nnoremap <silent> <nowait> <buffer>        q          :$wincmd l <bar> bdelete!<cr>
   nnoremap <silent> <nowait> <buffer>        <leader>q  :$wincmd l <bar> bdelete!<cr>
   nnoremap <silent> <nowait> <buffer>        <tab>      <c-w><c-w>
-  nnoremap <silent> <nowait> <buffer>        <cr>       :call <sid>open()<cr>
-  nnoremap <silent> <nowait> <buffer>        o          :call <sid>open()<cr>
-  nnoremap <silent> <nowait> <buffer>        O          :call <sid>open(1)<cr>
-  nnoremap <silent> <nowait> <buffer>        D          :call <sid>do('drop')<cr>
-  nnoremap <silent> <nowait> <buffer>        P          :call <sid>do('pop')<cr>
-  nnoremap <silent> <nowait> <buffer>        A          :call <sid>do('apply')<cr>
-  nnoremap <silent> <nowait> <buffer>        B          :call <sid>to_branch()<cr>
-  nnoremap <silent> <nowait> <buffer>        [          :<c-u>call <sid>folds(0)<cr>
-  nnoremap <silent> <nowait> <buffer>        ]          :<c-u>call <sid>folds(1)<cr>
+  nnoremap <silent> <nowait> <buffer>        <cr>       :call <sid>gs_open()<cr>
+  nnoremap <silent> <nowait> <buffer>        o          :call <sid>gs_open()<cr>
+  nnoremap <silent> <nowait> <buffer>        O          :call <sid>gs_open(1)<cr>
+  nnoremap <silent> <nowait> <buffer>        D          :call <sid>gs_do('drop')<cr>
+  nnoremap <silent> <nowait> <buffer>        P          :call <sid>gs_do('pop')<cr>
+  nnoremap <silent> <nowait> <buffer>        A          :call <sid>gs_do('apply')<cr>
+  nnoremap <silent> <nowait> <buffer>        B          :call <sid>gs_to_branch()<cr>
+  nnoremap <silent> <nowait> <buffer>        [          :<c-u>call <sid>gs_folds(0)<cr>
+  nnoremap <silent> <nowait> <buffer>        ]          :<c-u>call <sid>gs_folds(1)<cr>
+  nnoremap <silent> <nowait> <buffer>        g?         :echo 'o: open split / O: open tab / D: drop / A: apply / P: pop / q: quit'<cr>
 endfunction
 
 "------------------------------------------------------------------------------
@@ -163,7 +158,7 @@ endfunction
 "------------------------------------------------------------------------------
 
 function! s:gs_open(...)
-  let sha = gs#sha()
+  let sha = matchstr(getline('.'), '^[a-f0-9]\+')
   if empty(sha)
     return s:gs_shrug()
   endif
@@ -180,8 +175,8 @@ function! s:gs_open(...)
   nnoremap <silent> <nowait> <buffer>        q          :$wincmd w <bar> bdelete!<cr>
   nnoremap <silent> <nowait> <buffer>        <leader>q  :$wincmd w <bar> bdelete!<cr>
   nnoremap <silent> <nowait> <buffer>        <tab>      <c-w><c-w>
-  nnoremap <silent> <nowait> <buffer>        [          :<c-u>call <sid>folds(0)<cr>
-  nnoremap <silent> <nowait> <buffer>        ]          :<c-u>call <sid>folds(1)<cr>
+  nnoremap <silent> <nowait> <buffer>        [          :<c-u>call <sid>gs_folds(0)<cr>
+  nnoremap <silent> <nowait> <buffer>        ]          :<c-u>call <sid>gs_folds(1)<cr>
   let bang = a:0 ? '!' : ''
   if exists('#User#GV'.bang)
     execute 'doautocmd <nomodeline> User GV'.bang
@@ -190,7 +185,7 @@ function! s:gs_open(...)
   echo
 endfunction
 
-function! <sid>folds(down)
+function! s:gs_folds(down)
   let diffwin = exists('w:gv_stash_diff')
   if !diffwin
     if len(tabpagebuflist()) == 1 | return | endif
@@ -204,7 +199,7 @@ function! <sid>folds(down)
 endfunction
 
 function! s:gs_do(action)
-  let sha = gs#sha()
+  let sha = s:sha()
   if s:gs_confirm(a:action, sha)
     call s:gs_system(a:action, sha)
     if a:action != 'apply'
@@ -214,11 +209,12 @@ function! s:gs_do(action)
 endfunction
 
 function! s:gs_to_branch()
-  let msg = 'Do you want to create a branch from the stash ' . gs#sha() . '?'
+  let sha = s:sha()
+  let msg = 'Do you want to create a branch from ' . sha . '?'
   if confirm(msg, "&Yes\n&No", 2) == 1
     let name = input('New branch name? ')
     if empty(name) | return | endif
-    call s:gs_system('branch', name)
+    call s:gs_system('branch ' . name, sha)
     call s:gs_quit()
   endif
 endfunction
@@ -231,6 +227,10 @@ function! s:gs_warn(message)
   echohl WarningMsg | echom a:message | echohl None
 endfunction
 
+function! s:sha(...)
+  return matchstr(getline('.'), 'stash@{\d\+}')
+endfunction
+
 function! s:gs_shrug()
   call s:gs_warn('¯\_(ツ)_/¯')
 endfunction
@@ -240,13 +240,13 @@ function! s:gs_tabnew()
 endfunction
 
 function! s:gs_confirm(cmd, sha)
-  let msg = 'Do you want to ' . a:cmd . ' the stash ' . a:sha
+  let msg = 'Do you want to ' . a:cmd . ' ' . a:sha
   return confirm(msg, "&Yes\n&No", 2) == 1
 endfunction
 
 fun! s:gs_system(cmd, sha)
-  echo "\n\n"
-  e | echon system("git stash " . a:cmd . " " . a:sha)
+  echo "\n"
+  echon system("git stash " . a:cmd . " " . a:sha)
 endfun
 
 fun! s:gs_quit()
