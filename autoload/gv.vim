@@ -36,7 +36,7 @@ function! gv#start(bang, visual, line1, line2, args) abort
       let log_opts = extend(s:shellwords(a:args), s:log_opts(fugitive_repo, a:bang, a:visual, a:line1, a:line2))
       call s:setup(git_dir, fugitive_repo.config('remote.origin.url'))
       call s:create_gv_buffer(fugitive_repo, log_opts)
-      call fugitive#detect(@#)
+      call FugitiveDetect(@#)
     endif
   catch
     return s:warn(v:exception)

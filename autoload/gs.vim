@@ -28,7 +28,7 @@ function! gs#start(bang) abort
     endif
     call s:gs_setup(git_dir)
     call s:gs_list(fugitive_repo, cmd)
-    call fugitive#detect(@#)
+    call FugitiveDetect(@#)
   catch
     return s:gs_warn(v:exception)
   finally
