@@ -234,6 +234,7 @@ function! s:maps()
   xnoremap <silent> <nowait> <buffer>        o          :<c-u>call <sid>open(1)<cr>
   xnoremap <silent> <nowait> <buffer>        O          :<c-u>call <sid>open(1, 1)<cr>
   nnoremap          <nowait> <buffer> <expr> .          <sid>dot()
+  nnoremap          <nowait> <buffer> <expr> R          <sid>rebase()
   nnoremap          <nowait> <buffer> <expr> ~          <sid>tilde()
   nnoremap <silent> <nowait> <buffer> <expr> j          <sid>move('')
   nnoremap <silent> <nowait> <buffer> <expr> k          <sid>move('b')
@@ -284,6 +285,11 @@ function! s:dot()
   return empty(sha) ? '' : ':Git  '.sha."\<s-left>\<left>"
 endfunction
 
+function! s:rebase()
+  let sha = gv#sha()
+  return empty(sha) ? '' : ':Git rebase -i '.sha."\<s-left>\<left>"
+endfunction
+
 function! s:tilde()
   if !exists('g:loaded_gitgutter')
     call s:warn('GitGutter not loaded.')
@@ -332,6 +338,7 @@ function! s:show_help() abort
   echo 'o'     . "\t\tshow diff panel"
   echo 'O'     . "\t\topen in new tab"
   echo '.'     . "\t\t:Git | sha"
+  echo 'R'     . "\t\t:Git rebase -i| sha"
   echo '~'     . "\t\tset gitgutter_diff_base to commit"
   echo '['     . "\t\tprevious fold in side window"
   echo ']'     . "\t\tnext fold in side window"
