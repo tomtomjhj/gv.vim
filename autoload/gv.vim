@@ -160,8 +160,8 @@ function! s:open(visual, ...)
   if exists('#User#GV'.bang)
     execute 'doautocmd <nomodeline> User GV'.bang
   endif
-  let s:windows.diff = 1
   wincmd p
+  let s:windows.diff = line('.')
   echo
   if s:windows.summary
     call s:show_summary(0, 0)
@@ -359,7 +359,7 @@ endfunction
 
 function! s:folds(down)
   let was_diff_win = s:windows.diff && winnr() == winnr('$')
-  if !s:windows.diff
+  if !s:windows.diff || !was_diff_win && s:windows.diff != line('.')
     1wincmd w
     normal o
   endif
