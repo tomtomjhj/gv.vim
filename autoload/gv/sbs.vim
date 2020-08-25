@@ -1,44 +1,33 @@
 function! gv#sbs#show(all)
     if empty(g:gv_file) | return | endif
-    let s:sha = gv#sha()
-    let gv_tab = tabpagenr() - 1
-
-    "get commit message
-    let s:comm_msg = system('git log -1 --pretty=format:%s '.s:sha)
+    let [sha, tab, file] = [gv#sha(), tabpagenr() - 1, g:gv_file]
+    tabclose
 
     "open current file in a new tab
-    exe gv_tab."tabedit" g:gv_file
-    silent! let g:xtabline.Tabs[gv_tab].locked = 1
-    silent! let g:xtabline.Tabs[gv_tab].buffers.valid = [bufnr('%')]
+    exe tab."tabedit" fnameescape(file)
+    silent! let g:xtabline.Tabs[tab].locked = 1
+    silent! let g:xtabline.Tabs[tab].buffers.valid = [bufnr('%')]
     let ft = &ft
     diffthis
 
-    "open also other revisions
     if a:all
-      0Glog
-      buffer #
+      "all revisions to locations list
+      vsplit
+      wincmd l
+      0Gllog
+      set nofoldenable
+    else
+      "get commit message
+      let msg = system('git log -1 --pretty=format:%s '.sha)
+      "open revision in a split and set it ready for diff/scrollbind
+      vsplit
+      wincmd l
+      exe "0Git! show" sha.":".tr(file, '\', '/')
+      setlocal bt=nofile bh=wipe noswf nobl noma nofoldenable
+      let &ft = ft
+      diffthis
+      let b:XTbuf = {'name': 'Revision', 'icon': ''}
+      redraw
+      let &l:statusline = " " .file." %#DiffDelete# ".sha." %#Statusline# ".msg
     endif
-
-    "open revision in a split and set it ready for diff/scrollbind
-    vsplit
-    wincmd l
-    exe "0Git! show" s:sha.":".tr(g:gv_file, '\', '/')
-    setlocal bt=nofile bh=wipe noswf nobl noma
-    let &ft = ft
-    diffthis
-    let b:XTbuf = {'name': 'Revision', 'icon': ''}
-    autocmd BufEnter <buffer> call s:msg()
-    exe "normal! \<C-w>h\<C-w>=<C-l>"
-    call s:msg()
 endfunction
-
-"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-
-function! s:msg(...)
-    redraw!
-    echohl Label      | echon g:gv_file."\t"
-    echohl WarningMsg | echon s:sha
-    echohl Special    | echon "\t".s:comm_msg
-    echohl None
-endfunction
-
