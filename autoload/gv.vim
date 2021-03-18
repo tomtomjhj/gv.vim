@@ -118,8 +118,14 @@ function! s:create_gv_buffer(fugitive_repo, log_opts)
   if !exists(':Gbrowse')
     doautocmd <nomodeline> User Fugitive
   endif
-  call s:maps()
+  call s:maps(git_log_cmd)
   call s:syntax()
+  call s:cmdline_help()
+endfunction
+
+"------------------------------------------------------------------------------
+
+function! s:cmdline_help()
   redraw
   if exists('g:gv_file')
     nnoremap <silent> <buffer> <nowait> d :call gv#sbs#show(0)<cr><c-l>
@@ -176,11 +182,13 @@ function! s:scratch()
   setlocal buftype=nofile bufhidden=wipe noswapfile nomodeline
 endfunction
 
-function! s:fill(cmd)
+function! s:fill(cmd, ...)
   setlocal modifiable
+  if a:0 | %d_ | endif
   silent execute 'read' escape('!'.a:cmd, '%')
-  normal! gg"_dd
+  1d_
   setlocal nomodifiable
+  if a:0 | call s:cmdline_help() | endif
 endfunction
 
 function! s:syntax()
@@ -222,7 +230,7 @@ function! s:syntax()
   hi def link diffLine    Statement
 endfunction
 
-function! s:maps()
+function! s:maps(cmd)
   nnoremap <silent> <nowait> <buffer>        q          :call <sid>quit()<cr>
   nnoremap <silent> <nowait> <buffer>        <leader>q  :call <sid>quit()<cr>
   nnoremap <silent> <nowait> <buffer>        <tab>      <c-w><c-l>
@@ -249,6 +257,8 @@ function! s:maps()
   nmap              <nowait> <buffer> <C-p> ko
   xmap              <nowait> <buffer> <C-n> ]ogv
   xmap              <nowait> <buffer> <C-p> [ogv
+
+  exe 'nnoremap <silent><buffer> r :<c-u>call <sid>fill('. string(a:cmd) .', 1)<cr>'
 endfunction
 
 "------------------------------------------------------------------------------
@@ -333,6 +343,7 @@ endfunction
 
 function! s:show_help() abort
   echo 'q'     . "\t\tquit"
+  echo 'r'     . "\t\trefresh"
   echo '<tab>' . "\t\tchange window"
   echo '<cr>'  . "\t\tshow diff panel"
   echo 'o'     . "\t\tshow diff panel"
@@ -486,3 +497,4 @@ function! s:split(tab)
   let w:gv = 1
 endfunction
 
+" vim: ft=vim et ts=2 sw=2 fdm=manual
