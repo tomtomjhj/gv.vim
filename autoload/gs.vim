@@ -1,10 +1,10 @@
 let s:begin = '^[^0-9]*[0-9]\{4}-[0-9]\{2}-[0-9]\{2}\s\+'
 
 "------------------------------------------------------------------------------
-" Setup {{{1
+" Setup
 "------------------------------------------------------------------------------
 
-function! gs#start(bang) abort
+function! gs#start(bang) abort "{{{1
   if !exists('g:loaded_fugitive')
     return s:gs_warn('fugitive not found')
   endif
@@ -38,15 +38,13 @@ function! gs#start(bang) abort
   endtry
 endfunction
 
-"------------------------------------------------------------------------------
-
-function! s:gs_setup(git_dir)
-  call s:gs_tabnew()
+function! s:gs_setup(git_dir) "{{{1
+  -1tabnew
   call s:gs_scratch()
   let b:git_dir = a:git_dir
 endfunction
 
-function! s:gs_list(fugitive_repo, cmd)
+function! s:gs_list(fugitive_repo, cmd) "{{{1
   let repo_short_name = fnamemodify(substitute(a:fugitive_repo.dir(), '[\\/]\.git[\\/]\?$', '', ''), ':t')
   let bufname = repo_short_name.' Stashes'
   silent exe (bufexists(bufname) ? 'buffer' : 'file') fnameescape(bufname)
@@ -54,20 +52,15 @@ function! s:gs_list(fugitive_repo, cmd)
   call s:gs_fill(a:cmd)
   setlocal nowrap tabstop=8 cursorline iskeyword+=#
 
-  " if !exists(':Gbrowse')
-  "   doautocmd <nomodeline> User Fugitive
-  " endif
   call s:gs_maps()
   call s:gs_syntax()
   redraw
   echo 'o: open split / O: open tab / D: drop / A: apply / P: pop / q: quit'
 endfunction
 
-"------------------------------------------------------------------------------
-
-function! s:gs_split(tab)
+function! s:gs_split(tab) "{{{1
   if a:tab
-    call s:gs_tabnew()
+    -1tabnew
   elseif getwinvar(winnr('$'), 'gv_stash_diff', 0)
     $wincmd w
     enew
@@ -75,25 +68,26 @@ function! s:gs_split(tab)
     vertical botright new
   endif
   let w:gv_stash_diff = 1
-endfunction
+endfunction "}}}
+
 
 
 "------------------------------------------------------------------------------
-" Buffers {{{1
+" Create buffers
 "------------------------------------------------------------------------------
 
-function! s:gs_scratch()
+function! s:gs_scratch() "{{{1
   setlocal buftype=nofile bufhidden=wipe noswapfile
 endfunction
 
-function! s:gs_fill(cmd)
+function! s:gs_fill(cmd) "{{{1
   setlocal modifiable
   silent put = a:cmd
   normal! gg"_dd
   setlocal nomodifiable
 endfunction
 
-function! s:gs_syntax()
+function! s:gs_syntax() "{{{1
   setf GV
   syn clear
   syn match gsSha     /^[a-f0-9]\{6,}/ nextgroup=gsDate
@@ -126,7 +120,7 @@ function! s:gs_syntax()
   hi def link diffLine    Statement
 endfunction
 
-function! s:gs_maps()
+function! s:gs_maps() "{{{1
   nnoremap <silent> <nowait> <buffer>        q          :$wincmd l <bar> bdelete!<cr>
   nnoremap <silent> <nowait> <buffer>        <leader>q  :$wincmd l <bar> bdelete!<cr>
   nnoremap <silent> <nowait> <buffer>        <tab>      <c-w><c-w>
@@ -140,27 +134,31 @@ function! s:gs_maps()
   nnoremap <silent> <nowait> <buffer>        [          :<c-u>call <sid>gs_folds(0)<cr>
   nnoremap <silent> <nowait> <buffer>        ]          :<c-u>call <sid>gs_folds(1)<cr>
   nnoremap <silent> <nowait> <buffer>        g?         :echo 'o: open split / O: open tab / D: drop / A: apply / P: pop / q: quit'<cr>
-endfunction
+endfunction "}}}
+
+
 
 "------------------------------------------------------------------------------
-" Git {{{1
+" Git helpers
 "------------------------------------------------------------------------------
 
-function! s:git_dir()
+function! s:git_dir() "{{{1
   if empty(get(b:, 'git_dir', ''))
     return fugitive#extract_git_dir(expand('%:p'))
   endif
   return b:git_dir
-endfunction
+endfunction "}}}
+
+
 
 "------------------------------------------------------------------------------
-" Actions {{{1
+" Actions
 "------------------------------------------------------------------------------
 
-function! s:gs_open(...)
+function! s:gs_open(...) "{{{1
   let sha = matchstr(getline('.'), '^[a-f0-9]\+')
   if empty(sha)
-    return s:gs_shrug()
+    return s:gs_warn('¯\_(ツ)_/¯')
   endif
 
   call s:gs_split(a:0)
@@ -185,7 +183,7 @@ function! s:gs_open(...)
   echo
 endfunction
 
-function! s:gs_folds(down)
+function! s:gs_folds(down) "{{{1
   let diffwin = exists('w:gv_stash_diff')
   if !diffwin
     if len(tabpagebuflist()) == 1 | return | endif
@@ -198,9 +196,9 @@ function! s:gs_folds(down)
   if !diffwin | wincmd h | endif
 endfunction
 
-function! s:gs_do(action)
+function! s:gs_do(action) "{{{1
   let sha = s:sha()
-  if s:gs_confirm(a:action, sha)
+  if confirm('Do you want to ' . a:action . ' ' . sha, "&Yes\n&No", 2) == 1
     call s:gs_system(a:action, sha)
     if a:action != 'apply'
       call s:gs_quit()
@@ -208,7 +206,7 @@ function! s:gs_do(action)
   endif
 endfunction
 
-function! s:gs_to_branch()
+function! s:gs_to_branch() "{{{1
   let sha = s:sha()
   let msg = 'Do you want to create a branch from ' . sha . '?'
   if confirm(msg, "&Yes\n&No", 2) == 1
@@ -217,42 +215,31 @@ function! s:gs_to_branch()
     call s:gs_system('branch ' . name, sha)
     call s:gs_quit()
   endif
-endfunction
+endfunction "}}}
+
+
 
 "------------------------------------------------------------------------------
-" Helpers {{{1
+" Helpers
 "------------------------------------------------------------------------------
 
-function! s:gs_warn(message)
+let s:sha = { -> matchstr(getline('.'), 'stash@{\d\+}') }
+
+function! s:gs_warn(message) "{{{1
   echohl WarningMsg | echom a:message | echohl None
 endfunction
 
-function! s:sha(...)
-  return matchstr(getline('.'), 'stash@{\d\+}')
-endfunction
-
-function! s:gs_shrug()
-  call s:gs_warn('¯\_(ツ)_/¯')
-endfunction
-
-function! s:gs_tabnew()
-  execute (tabpagenr()-1).'tabnew'
-endfunction
-
-function! s:gs_confirm(cmd, sha)
-  let msg = 'Do you want to ' . a:cmd . ' ' . a:sha
-  return confirm(msg, "&Yes\n&No", 2) == 1
-endfunction
-
-fun! s:gs_system(cmd, sha)
-  echo "\n"
+function! s:gs_system(cmd, sha) "{{{1
+  redraw
   echon system("git stash " . a:cmd . " " . a:sha)
-endfun
+endfunction
 
-fun! s:gs_quit()
+function! s:gs_quit() "{{{1
   if len(tabpagebuflist()) == 1 && !exists('w:gv_stash_diff')
     normal q
   else
     normal qq
   endif
-endfun
+endfunction "}}}
+
+" vim: ft=vim et ts=2 sw=2 sts=2 fdm=marker
