@@ -54,7 +54,7 @@ function! s:to_location_list(buf, visual)
   if !exists(':Gllog')
     return
   endif
-  tab split
+  -1tab split
   silent execute a:visual ? "'<,'>" : "" 'Gllog'
   call setloclist(0, insert(getloclist(0), {'bufnr': a:buf}, 0))
   b #
