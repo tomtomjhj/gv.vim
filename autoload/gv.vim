@@ -376,6 +376,9 @@ function! s:folds(down) "{{{1
     normal o
   endif
   $wincmd w
+  if &fdm != 'syntax'
+    setl fdm=syntax
+  endif
   if a:down
     silent! normal! zczjzo[z
   else
