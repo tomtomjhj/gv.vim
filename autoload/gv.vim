@@ -135,6 +135,7 @@ function! s:cmdline_help() "{{{1
   redraw
   if exists('g:gv_file')
     nnoremap <silent> <buffer> <nowait> d :-1Gtabedit <C-r>=gv#sha()<CR>:<C-r>=gv_file<CR><cr>:vsplit <C-r>=gv_file<CR><CR>:windo diffthis<cr><C-w>p
+    xnoremap <silent> <buffer> <nowait> d <esc>:call <sid>visual_revisions_diff()<cr>
     nnoremap <silent> <buffer> <nowait> s :set lz<cr>:Gvsplit <C-r>=gv#sha()<CR>:<C-r>=gv_file<CR><cr><C-w>L:set nolz<cr>
     nnoremap <silent> <buffer> <nowait> S :-1Gtabedit <C-r>=gv#sha()<CR>:<C-r>=gv_file<CR><cr><C-w>L
     nnoremap <silent> <buffer> <nowait> L :call <sid>to_location_list(bufnr(gv_file), 0)<cr><cr>
@@ -143,6 +144,17 @@ function! s:cmdline_help() "{{{1
   else
     echo 'o: open split / O: open tab / q: quit / g?: help'
   endif
+endfunction
+
+function! s:visual_revisions_diff()
+  normal! '<
+  let s1 = gv#sha() . ':' . g:gv_file
+  normal! '>
+  let s2 = gv#sha() . ':' . g:gv_file
+  exe '-1Gtabedit' s1
+  diffthis
+  exe 'Gvsplit' s2
+  diffthis
 endfunction
 
 function! s:open(visual, ...) "{{{1
