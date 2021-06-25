@@ -57,12 +57,13 @@ function! s:to_location_list(buf, visual)
   -1tab split
   silent execute a:visual ? "'<,'>" : "" 'Gllog'
   call setloclist(0, insert(getloclist(0), {'bufnr': a:buf}, 0))
-  b #
+  noautocmd b #
   lopen
   xnoremap <buffer> o :call <sid>gld()<cr>
   nnoremap <buffer> o <cr><c-w><c-w>
   nnoremap <buffer> O :call <sid>gld()<cr>
   nnoremap <buffer> q :tabclose<cr>
+  nnoremap <buffer> gq :tabclose<cr>
   call matchadd('Conceal', '^fugitive://.\{-}\.git//')
   call matchadd('Conceal', '^fugitive://.\{-}\.git//\x\{7}\zs.\{-}||')
   setlocal concealcursor=nv conceallevel=3 nowrap
@@ -120,7 +121,7 @@ function! s:create_gv_buffer(fugitive_repo, log_opts) "{{{1
   setlocal nowrap tabstop=8 cursorline iskeyword+=#
   let s:windows = {'diff': 0, 'summary': 0}
 
-  if !exists(':Gbrowse')
+  if !exists(':GBrowse')
     doautocmd <nomodeline> User Fugitive
   endif
   call s:maps(git_log_cmd)
@@ -155,7 +156,7 @@ function! s:open(visual, ...) "{{{1
   call s:scratch()
   if type == 'commit'
     execute 'e' escape(target, ' ')
-    nnoremap <silent> <buffer> gb :Gbrowse<cr>
+    nnoremap <silent> <buffer> gb :GBrowse<cr>
   elseif type == 'diff'
     call s:fill(target)
     setfiletype diff
@@ -290,7 +291,7 @@ function! s:gbrowse() "{{{1
   if empty(sha)
     return s:shrug()
   endif
-  execute 'Gbrowse' sha
+  execute 'GBrowse' sha
 endfunction
 
 function! s:dot() "{{{1
@@ -465,7 +466,7 @@ function! s:log_opts(fugitive_repo, bang, visual, line1, line2) "{{{1
   if a:visual || a:bang
     let g:gv_file = expand('%')
     call s:check_buffer(a:fugitive_repo, g:gv_file)
-    return a:visual ? [printf('-L%d,%d:%s', a:line1, a:line2, g:gv_file)] : ['--follow', g:gv_file]
+    return a:visual ? [printf('-L%d,%d:%s', a:line1, a:line2, current)] : ['--follow', '--', current]
   else
     silent! unlet g:gv_file
   endif

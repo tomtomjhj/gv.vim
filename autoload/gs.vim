@@ -9,7 +9,7 @@ function! gs#start(bang) abort "{{{1
     return s:gs_warn('fugitive not found')
   endif
 
-  let git_dir = s:git_dir()
+  let git_dir = FugitiveGitDir()
   if empty(git_dir)
     return s:gs_warn('not in git repo')
   endif
@@ -77,7 +77,7 @@ endfunction "}}}
 "------------------------------------------------------------------------------
 
 function! s:gs_scratch() "{{{1
-  setlocal buftype=nofile bufhidden=wipe noswapfile
+  setlocal buftype=nofile bufhidden=wipe noswapfile nomodeline
 endfunction
 
 function! s:gs_fill(cmd) "{{{1
@@ -134,19 +134,6 @@ function! s:gs_maps() "{{{1
   nnoremap <silent> <nowait> <buffer>        [          :<c-u>call <sid>gs_folds(0)<cr>
   nnoremap <silent> <nowait> <buffer>        ]          :<c-u>call <sid>gs_folds(1)<cr>
   nnoremap <silent> <nowait> <buffer>        g?         :echo 'o: open split / O: open tab / D: drop / A: apply / P: pop / q: quit'<cr>
-endfunction "}}}
-
-
-
-"------------------------------------------------------------------------------
-" Git helpers
-"------------------------------------------------------------------------------
-
-function! s:git_dir() "{{{1
-  if empty(get(b:, 'git_dir', ''))
-    return fugitive#extract_git_dir(expand('%:p'))
-  endif
-  return b:git_dir
 endfunction "}}}
 
 
