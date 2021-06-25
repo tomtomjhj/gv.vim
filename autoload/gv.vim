@@ -1,14 +1,16 @@
 let s:begin = '^[^0-9]*[0-9]\{4}-[0-9]\{2}-[0-9]\{2}\s\+'
 
 "------------------------------------------------------------------------------
-" Setup {{{1
+" Setup
 "------------------------------------------------------------------------------
 
 function! gv#sha(...)
+  " Commit sha at current line {{{1
   return matchstr(get(a:000, 0, getline('.')), s:begin.'\zs[a-f0-9]\+')
-endfunction
+endfunction "}}}
 
 function! gv#start(bang, visual, line1, line2, args) abort
+  " Start the command {{{1
   if !exists('g:loaded_fugitive')
     return s:warn('fugitive not found')
   endif
@@ -19,12 +21,10 @@ function! gv#start(bang, visual, line1, line2, args) abort
   endif
 
   let fugitive_repo = fugitive#repo(git_dir)
-  let cd = exists('*haslocaldir') && haslocaldir() ? 'lcd' : 'cd'
-  let cwd = getcwd()
   let root = fugitive_repo.tree()
   try
-    if cwd !=# root
-      execute cd escape(root, ' ')
+    if getcwd() !=# root
+      execute 'lcd' escape(root, ' ')
     endif
     if a:args =~ '?$'
       if len(a:args) > 1
@@ -40,16 +40,17 @@ function! gv#start(bang, visual, line1, line2, args) abort
     endif
   catch
     return s:warn(v:exception)
-  finally
-    if getcwd() !=# cwd
-      cd -
-    endif
   endtry
-endfunction
+endfunction "}}}
 
+
+
+"------------------------------------------------------------------------------
+" GV? command (current buffer to location list)
 "------------------------------------------------------------------------------
 
 function! s:to_location_list(buf, visual)
+  " Load commits affecting current file in location list {{{1
   if !exists(':Gllog')
     return
   endif
@@ -66,9 +67,10 @@ function! s:to_location_list(buf, visual)
   call matchadd('Conceal', '^fugitive://.\{-}\.git//\x\{7}\zs.\{-}||')
   setlocal concealcursor=nv conceallevel=3 nowrap
   let w:quickfix_title = 'o: open / o (in visual): diff / O: open (tab) / q: quit'
-endfunction
+endfunction "}}}
 
 function! s:gld() range
+  " Open revision(s) in new tab, with diff if run from visual mode {{{1
   let [to, from] = map([a:firstline, a:lastline], 'split(getline(v:val), "|")[0]')
   let fn = split(getline(1), '|')[0]
   execute (tabpagenr()-1).'Gtabedit' escape(to, ' ') . ':' . escape(fn, ' ')
@@ -76,11 +78,15 @@ function! s:gld() range
     execute 'Gvsplit' escape(from, ' ') . ':' . escape(fn, ' ')
     windo diffthis
   endif
-endfunction
+endfunction "}}}
+
+
 
 "------------------------------------------------------------------------------
+" GV command
+"------------------------------------------------------------------------------
 
-function! s:setup(git_dir, git_origin)
+function! s:setup(git_dir, git_origin) "{{{1
   call s:tabnew()
   call s:scratch()
 
@@ -101,9 +107,7 @@ function! s:setup(git_dir, git_origin)
   let b:git_dir = a:git_dir
 endfunction
 
-"------------------------------------------------------------------------------
-
-function! s:create_gv_buffer(fugitive_repo, log_opts)
+function! s:create_gv_buffer(fugitive_repo, log_opts) "{{{1
   let default_opts = ['--color=never', '--date=short', '--format=%cd %h%d %s (%an)']
   let git_args = ['log'] + default_opts + a:log_opts
   let git_log_cmd = call(a:fugitive_repo.git_command, git_args, a:fugitive_repo)
@@ -124,9 +128,7 @@ function! s:create_gv_buffer(fugitive_repo, log_opts)
   call s:cmdline_help()
 endfunction
 
-"------------------------------------------------------------------------------
-
-function! s:cmdline_help()
+function! s:cmdline_help() "{{{1
   redraw
   if exists('g:gv_file')
     nnoremap <silent> <buffer> <nowait> d :call gv#sbs#show(0)<cr><c-l>
@@ -138,9 +140,7 @@ function! s:cmdline_help()
   endif
 endfunction
 
-"------------------------------------------------------------------------------
-
-function! s:open(visual, ...)
+function! s:open(visual, ...) "{{{1
   let [type, target] = s:type(a:visual)
 
   if empty(type)
@@ -173,17 +173,17 @@ function! s:open(visual, ...)
   if s:windows.summary
     call s:show_summary(0, 0)
   endif
-endfunction
+endfunction "}}}
 
 "------------------------------------------------------------------------------
-" Buffers {{{1
+" Create buffers
 "------------------------------------------------------------------------------
 
-function! s:scratch()
+function! s:scratch() "{{{1
   setlocal buftype=nofile bufhidden=wipe noswapfile nomodeline
 endfunction
 
-function! s:fill(cmd, ...)
+function! s:fill(cmd, ...) "{{{1
   setlocal modifiable
   if a:0 | %d_ | endif
   silent execute 'read' escape('!'.a:cmd, '%')
@@ -192,7 +192,7 @@ function! s:fill(cmd, ...)
   if a:0 | call s:cmdline_help() | endif
 endfunction
 
-function! s:syntax()
+function! s:syntax() "{{{1
   setf GV
   syn clear
   syn match gvInfo    /^[^0-9]*\zs[0-9-]\+\s\+[a-f0-9]\+ / contains=gvDate,gvSha nextgroup=gvMessage,gvMeta
@@ -231,7 +231,7 @@ function! s:syntax()
   hi def link diffLine    Statement
 endfunction
 
-function! s:maps(cmd)
+function! s:maps(cmd) "{{{1
   nnoremap <silent> <nowait> <buffer>        q          :call <sid>quit()<cr>
   nnoremap <silent> <nowait> <buffer>        <leader>q  :call <sid>quit()<cr>
   nnoremap <silent> <nowait> <buffer>        <tab>      <c-w><c-l>
@@ -260,30 +260,30 @@ function! s:maps(cmd)
   xmap              <nowait> <buffer> <C-p> [ogv
 
   exe 'nnoremap <silent><buffer> r :<c-u>call <sid>fill('. string(a:cmd) .', 1)<cr>'
-endfunction
+endfunction "}}}
 
 "------------------------------------------------------------------------------
-" Git {{{1
+" Git helpers
 "------------------------------------------------------------------------------
 
-function! s:tracked(fugitive_repo, file)
+function! s:is_tracked(fugitive_repo, file) "{{{1
   call system(a:fugitive_repo.git_command('ls-files', '--error-unmatch', a:file))
   return !v:shell_error
 endfunction
 
-function! s:check_buffer(fugitive_repo, current)
+function! s:check_buffer(fugitive_repo, current) "{{{1
   if empty(a:current)
     throw 'untracked buffer'
-  elseif !s:tracked(a:fugitive_repo, a:current)
+  elseif !s:is_tracked(a:fugitive_repo, a:current)
     throw a:current.' is untracked'
   endif
-endfunction
+endfunction "}}}
 
 "------------------------------------------------------------------------------
-" Actions {{{1
+" Actions
 "------------------------------------------------------------------------------
 
-function! s:gbrowse()
+function! s:gbrowse() "{{{1
   let sha = gv#sha()
   if empty(sha)
     return s:shrug()
@@ -291,17 +291,17 @@ function! s:gbrowse()
   execute 'Gbrowse' sha
 endfunction
 
-function! s:dot()
+function! s:dot() "{{{1
   let sha = gv#sha()
   return empty(sha) ? '' : ':Git  '.sha."\<s-left>\<left>"
 endfunction
 
-function! s:rebase()
+function! s:rebase() "{{{1
   let sha = gv#sha()
   return empty(sha) ? '' : ':Git rebase -i '.sha."\<s-left>\<left>"
 endfunction
 
-function! s:tilde()
+function! s:tilde() "{{{1
   if !exists('g:loaded_gitgutter')
     call s:warn('GitGutter not loaded.')
     return
@@ -312,7 +312,7 @@ function! s:tilde()
   call s:warn('GitGutter diff base set to commit '.sha)
 endfunction
 
-function! s:show_summary(diff, toggle)
+function! s:show_summary(diff, toggle) "{{{1
   if a:diff
     if s:windows.diff
       call s:quit()
@@ -342,7 +342,7 @@ function! s:show_summary(diff, toggle)
   1wincmd w
 endfunction
 
-function! s:show_help() abort
+function! s:show_help() abort "{{{1
   echo 'q'     . "\t\tquit"
   echo 'r'     . "\t\trefresh"
   echo '<tab>' . "\t\tchange window"
@@ -369,7 +369,7 @@ function! s:show_help() abort
   echo 'O'     . "\t\t[V] open in new tab"
 endfunction
 
-function! s:folds(down)
+function! s:folds(down) "{{{1
   let was_diff_win = s:windows.diff && winnr() == winnr('$')
   if !s:windows.diff || !was_diff_win && s:windows.diff != line('.')
     1wincmd w
@@ -385,21 +385,21 @@ function! s:folds(down)
   if !was_diff_win
     1wincmd w
   endif
-endfunction
+endfunction "}}}
 
 "------------------------------------------------------------------------------
-" Helpers {{{1
+" Helpers
 "------------------------------------------------------------------------------
 
-function! s:warn(message)
+function! s:warn(message) "{{{1
   echohl WarningMsg | echom a:message | echohl None
 endfunction
 
-function! s:shrug()
+function! s:shrug() "{{{1
   call s:warn('¯\_(ツ)_/¯')
 endfunction
 
-function! s:quit()
+function! s:quit() "{{{1
   if s:windows.summary
     pclose!
     let s:windows.summary = 0
@@ -414,20 +414,20 @@ function! s:quit()
   endif
 endfunction
 
-function! s:move(flag)
+function! s:move(flag) "{{{1
   let [l, c] = searchpos(s:begin, a:flag)
   return l ? printf('%dG%d|', l, c) : ''
 endfunction
 
-function! s:browse(url)
+function! s:browse(url) "{{{1
   call netrw#BrowseX(b:git_origin.a:url, 0)
 endfunction
 
-function! s:tabnew()
+function! s:tabnew() "{{{1
   execute (tabpagenr()-1).'tabnew'
 endfunction
 
-function! s:shellwords(arg)
+function! s:shellwords(arg) "{{{1
   let words = []
   let contd = 0
   for token in split(a:arg, '\%(\%(''\%([^'']\|''''\)\+''\)\|\%("\%(\\"\|[^"]\)\+"\)\|\%(\%(\\ \|\S\)\+\)\)\s*\zs')
@@ -442,14 +442,14 @@ function! s:shellwords(arg)
   return words
 endfunction
 
-function! s:trim(arg)
+function! s:trim(arg) "{{{1
   let arg = substitute(a:arg, '\s*$', '', '')
   return arg =~ "^'.*'$" ? substitute(arg[1:-2], "''", '', 'g')
         \ : arg =~ '^".*"$' ? substitute(substitute(arg[1:-2], '""', '', 'g'), '\\"', '"', 'g')
         \ : substitute(substitute(arg, '""\|''''', '', 'g'), '\\ ', ' ', 'g')
 endfunction
 
-function! s:log_opts(fugitive_repo, bang, visual, line1, line2)
+function! s:log_opts(fugitive_repo, bang, visual, line1, line2) "{{{1
   if a:visual || a:bang
     let g:gv_file = expand('%')
     call s:check_buffer(a:fugitive_repo, g:gv_file)
@@ -460,7 +460,7 @@ function! s:log_opts(fugitive_repo, bang, visual, line1, line2)
   return ['--graph']
 endfunction
 
-function! s:type(visual)
+function! s:type(visual) "{{{1
   if a:visual
     let shas = filter(map(getline("'<", "'>"), 'gv#sha(v:val)'), '!empty(v:val)')
     if len(shas) < 2
@@ -486,7 +486,7 @@ function! s:type(visual)
   return [0, 0]
 endfunction
 
-function! s:split(tab)
+function! s:split(tab) "{{{1
   if a:tab
     call s:tabnew()
   elseif getwinvar(winnr('$'), 'gv')
@@ -496,6 +496,6 @@ function! s:split(tab)
     vertical botright new
   endif
   let w:gv = 1
-endfunction
+endfunction "}}}
 
-" vim: ft=vim et ts=2 sw=2 fdm=manual
+" vim: ft=vim et ts=2 sw=2 sts=2 fdm=marker
