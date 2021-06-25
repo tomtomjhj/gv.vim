@@ -70,9 +70,10 @@ endfunction
 
 function! s:gld() range
   let [to, from] = map([a:firstline, a:lastline], 'split(getline(v:val), "|")[0]')
-  execute (tabpagenr()-1).'tabedit' escape(to, ' ')
+  let fn = split(getline(1), '|')[0]
+  execute (tabpagenr()-1).'Gtabedit' escape(to, ' ') . ':' . escape(fn, ' ')
   if from !=# to
-    execute 'vsplit' escape(from, ' ')
+    execute 'Gvsplit' escape(from, ' ') . ':' . escape(fn, ' ')
     windo diffthis
   endif
 endfunction
