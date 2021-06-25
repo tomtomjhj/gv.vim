@@ -46,13 +46,11 @@ function! gv#start(bang, visual, line1, line2, args) abort
 endfunction "}}}
 
 
-
 "------------------------------------------------------------------------------
 " GV? command (current buffer to location list)
 "------------------------------------------------------------------------------
 
-function! s:to_location_list(buf, visual)
-  " Load commits affecting current file in location list {{{1
+function! s:to_location_list(buf, visual) "{{{1
   if !exists(':Gllog')
     return
   endif
@@ -61,28 +59,62 @@ function! s:to_location_list(buf, visual)
   call setloclist(0, insert(getloclist(0), {'bufnr': a:buf}, 0))
   noautocmd b #
   lopen
-  xnoremap <buffer> o :call <sid>gld()<cr>
-  nnoremap <buffer> o <cr><c-w><c-w>
-  nnoremap <buffer> O :call <sid>gld()<cr>
-  nnoremap <buffer> q :tabclose<cr>
-  nnoremap <buffer> gq :tabclose<cr>
+  xnoremap <silent> <nowait> <buffer> o   :call <sid>gl('open', 0)<cr>
+  nnoremap <silent> <nowait> <buffer> o   <cr><c-w><c-w>
+  nnoremap <silent> <nowait> <buffer> O   :call <sid>gl('open', 1)<cr>
+  nnoremap <silent> <nowait> <buffer> a   :call <sid>gl('rev', 0)<cr>
+  nnoremap <silent> <nowait> <buffer> A   :call <sid>gl('rev', 1)<cr>
+  xnoremap <silent> <nowait> <buffer> d   :call <sid>gl('diff', 1)<cr>
+  nnoremap <silent> <nowait> <buffer> d   :call <sid>gl('diff', 1)<cr>
+  nnoremap <silent> <nowait> <buffer> q   :tabclose<cr>
+  nnoremap <silent> <nowait> <buffer> gq  :tabclose<cr>
+
+  xnoremap <silent> <nowait> <buffer> v   V
+  nnoremap <silent> <nowait> <buffer> v   V
+
   call matchadd('Conceal', '^fugitive://.\{-}\.git//')
   call matchadd('Conceal', '^fugitive://.\{-}\.git//\x\{7}\zs.\{-}||')
   setlocal concealcursor=nv conceallevel=3 nowrap
   let w:quickfix_title = 'o: open / o (in visual): diff / O: open (tab) / q: quit'
-endfunction "}}}
+endfunction
 
-function! s:gld() range
-  " Open revision(s) in new tab, with diff if run from visual mode {{{1
+function! s:gl(type, tab) range "{{{1
   let [to, from] = map([a:firstline, a:lastline], 'split(getline(v:val), "|")[0]')
-  let fn = split(getline(1), '|')[0]
-  execute (tabpagenr()-1).'Gtabedit' escape(to, ' ') . ':' . escape(fn, ' ')
-  if from !=# to
-    execute 'Gvsplit' escape(from, ' ') . ':' . escape(fn, ' ')
-    windo diffthis
-  endif
-endfunction "}}}
 
+  " escape spaces
+  let [from, to, fn] = map([from, to, split(getline(1), '|')[0]], 'escape(v:val, " ")')
+
+  if a:tab
+    -tabnew
+    call s:scratch()
+  else
+    1wincmd w
+  endif
+
+  " older revision is always put to the right, newest to the left
+
+  if a:type == 'open'
+    if from !=# to
+      execute '0Git diff' from . '..' . to . ' -- ' . fn
+    else
+      execute '0Git diff' to . ' -- ' . fn
+    endif
+
+  elseif a:type == 'rev'
+    execute 'Gedit' to . ':' . fn
+
+  elseif a:type == 'diff'
+    execute 'Gedit' from . ':' . fn
+    if from !=# to
+      execute 'Gvsplit' to . ':' . fn
+    else
+      execute 'vsplit' fn
+    endif
+    windo diffthis
+
+  endif
+  wincmd p
+endfunction "}}}
 
 
 "------------------------------------------------------------------------------
@@ -90,7 +122,7 @@ endfunction "}}}
 "------------------------------------------------------------------------------
 
 function! s:setup(git_dir, git_origin) "{{{1
-  call s:tabnew()
+  -1tabnew
   call s:scratch()
 
   if exists('g:fugitive_github_domains')
@@ -134,11 +166,6 @@ endfunction
 function! s:cmdline_help() "{{{1
   redraw
   if exists('g:gv_file')
-    nnoremap <silent> <buffer> <nowait> d :-1Gtabedit <C-r>=gv#sha()<CR>:<C-r>=gv_file<CR><cr>:vsplit <C-r>=gv_file<CR><CR>:windo diffthis<cr><C-w>p
-    xnoremap <silent> <buffer> <nowait> d <esc>:call <sid>visual_revisions_diff()<cr>
-    nnoremap <silent> <buffer> <nowait> s :set lz<cr>:Gvsplit <C-r>=gv#sha()<CR>:<C-r>=gv_file<CR><cr><C-w>L:set nolz<cr>
-    nnoremap <silent> <buffer> <nowait> S :-1Gtabedit <C-r>=gv#sha()<CR>:<C-r>=gv_file<CR><cr><C-w>L
-    nnoremap <silent> <buffer> <nowait> L :call <sid>to_location_list(bufnr(gv_file), 0)<cr><cr>
     echohl Label | echo g:gv_file."\t"
     echohl None  | echon 'o: open split / O: open tab / s: show revision / S: to tab / d: diff / L: GV? / q: quit / g?: help'
   else
@@ -157,8 +184,8 @@ function! s:visual_revisions_diff()
   diffthis
 endfunction
 
-function! s:open(visual, ...) "{{{1
-  let [type, target] = s:type(a:visual)
+function! s:open(visual, tab) "{{{1
+  let [type, target, cmd] = s:type(a:visual)
 
   if empty(type)
     return s:shrug()
@@ -166,14 +193,15 @@ function! s:open(visual, ...) "{{{1
     return s:browse(target)
   endif
 
-  call s:split(a:0)
+  call s:split(a:tab)
   call s:scratch()
   if type == 'commit'
     execute 'e' escape(target, ' ')
     nnoremap <silent> <buffer> gb :GBrowse<cr>
   elseif type == 'diff'
-    call s:fill(target)
-    setfiletype diff
+    call s:fill(target . (exists('g:gv_file') ? ' -- ' . g:gv_file : ''))
+    setfiletype git
+    let &l:statusline = ' ' . cmd
   endif
   nnoremap <silent> <nowait> <buffer>        q          :call <sid>quit()<cr>
   nnoremap <silent> <nowait> <buffer>        <leader>q  :call <sid>quit()<cr>
@@ -191,6 +219,7 @@ function! s:open(visual, ...) "{{{1
     call s:show_summary(0, 0)
   endif
 endfunction "}}}
+
 
 "------------------------------------------------------------------------------
 " Create buffers
@@ -210,7 +239,7 @@ function! s:fill(cmd, ...) "{{{1
 endfunction
 
 function! s:syntax() "{{{1
-  setf GV
+  setfiletype GV
   syn clear
   syn match gvInfo    /^[^0-9]*\zs[0-9-]\+\s\+[a-f0-9]\+ / contains=gvDate,gvSha nextgroup=gvMessage,gvMeta
   syn match gvDate    /\S\+ / contained
@@ -253,11 +282,11 @@ function! s:maps(cmd) "{{{1
   nnoremap <silent> <nowait> <buffer>        <leader>q  :call <sid>quit()<cr>
   nnoremap <silent> <nowait> <buffer>        <tab>      <c-w><c-l>
   nnoremap <silent> <nowait> <buffer>        gb         :call <sid>gbrowse()<cr>
-  nnoremap <silent> <nowait> <buffer>        <cr>       :call <sid>open(0)<cr>
-  nnoremap <silent> <nowait> <buffer>        o          :call <sid>open(0)<cr>
+  nnoremap <silent> <nowait> <buffer>        <cr>       :call <sid>open(0, 0)<cr>
+  nnoremap <silent> <nowait> <buffer>        o          :call <sid>open(0, 0)<cr>
   nnoremap <silent> <nowait> <buffer>        O          :call <sid>open(0, 1)<cr>
-  xnoremap <silent> <nowait> <buffer>        <cr>       :<c-u>call <sid>open(1)<cr>
-  xnoremap <silent> <nowait> <buffer>        o          :<c-u>call <sid>open(1)<cr>
+  xnoremap <silent> <nowait> <buffer>        <cr>       :<c-u>call <sid>open(1, 0)<cr>
+  xnoremap <silent> <nowait> <buffer>        o          :<c-u>call <sid>open(1, 0)<cr>
   xnoremap <silent> <nowait> <buffer>        O          :<c-u>call <sid>open(1, 1)<cr>
   nnoremap          <nowait> <buffer> <expr> .          <sid>dot()
   nnoremap          <nowait> <buffer> <expr> R          <sid>rebase()
@@ -270,14 +299,25 @@ function! s:maps(cmd) "{{{1
   nnoremap <silent> <nowait> <buffer>        I          :<c-u>call <sid>show_summary(1, 0)<cr>
   nnoremap <silent> <nowait> <buffer>        i          :<c-u>call <sid>show_summary(0, 1)<cr>
   nnoremap <silent> <nowait> <buffer>        g?         :<c-u>call <sid>show_help()<cr>
+  nnoremap <silent> <nowait> <buffer>        v          V
+  xnoremap <silent> <nowait> <buffer>        v          V
 
   nmap              <nowait> <buffer> <C-n> jo
   nmap              <nowait> <buffer> <C-p> ko
   xmap              <nowait> <buffer> <C-n> ]ogv
   xmap              <nowait> <buffer> <C-p> [ogv
 
+  if exists('g:gv_file')
+    nnoremap <silent> <buffer> <nowait> d :-1Gtabedit <C-r>=gv#sha()<CR>:<C-r>=gv_file<CR><cr>:vsplit <C-r>=gv_file<CR><CR>:windo diffthis<cr><C-w>p
+    xnoremap <silent> <buffer> <nowait> d <esc>:call <sid>visual_revisions_diff()<cr>
+    nnoremap <silent> <buffer> <nowait> a :set lz<cr>:Gvsplit <C-r>=gv#sha()<CR>:<C-r>=gv_file<CR><cr><C-w>L:set nolz<cr>
+    nnoremap <silent> <buffer> <nowait> A :-1Gtabedit <C-r>=gv#sha()<CR>:<C-r>=gv_file<CR><cr><C-w>L
+    nnoremap <silent> <buffer> <nowait> L :call <sid>to_location_list(bufnr(gv_file), 0)<cr><cr>
+  endif
+
   exe 'nnoremap <silent><buffer> r :<c-u>call <sid>fill('. string(a:cmd) .', 1)<cr>'
 endfunction "}}}
+
 
 "------------------------------------------------------------------------------
 " Git helpers
@@ -295,6 +335,7 @@ function! s:check_buffer(fugitive_repo, current) "{{{1
     throw a:current.' is untracked'
   endif
 endfunction "}}}
+
 
 "------------------------------------------------------------------------------
 " Actions
@@ -409,6 +450,7 @@ function! s:folds(down) "{{{1
   endif
 endfunction "}}}
 
+
 "------------------------------------------------------------------------------
 " Helpers
 "------------------------------------------------------------------------------
@@ -448,10 +490,6 @@ endfunction
 
 function! s:browse(url) "{{{1
   call netrw#BrowseX(b:git_origin.a:url, 0)
-endfunction
-
-function! s:tabnew() "{{{1
-  execute (tabpagenr()-1).'tabnew'
 endfunction
 
 function! s:shellwords(arg) "{{{1
@@ -501,31 +539,35 @@ function! s:type(visual) "{{{1
   if a:visual
     let shas = filter(map(getline("'<", "'>"), 'gv#sha(v:val)'), '!empty(v:val)')
     if len(shas) < 2
-      return [0, 0]
+      return [0, 0, '']
     endif
-    return ['diff', fugitive#repo().git_command('diff', shas[-1], shas[0])]
+    let cmd = 'git diff ' . shas[-1] . ' ' . shas[0]
+    if exists('g:gv_file')
+      let cmd .= ' -- ' . g:gv_file
+    endif
+    return ['diff', fugitive#repo().git_command('diff', shas[-1], shas[0]), cmd]
   endif
 
   if exists('b:git_origin')
     let syn = synIDattr(synID(line('.'), col('.'), 0), 'name')
     if syn == 'gvGitHub'
-      return ['link', '/issues/'.expand('<cword>')[1:]]
+      return ['link', '/issues/'.expand('<cword>')[1:], '']
     elseif syn == 'gvTag'
       let tag = matchstr(getline('.'), '(tag: \zs[^ ,)]\+')
-      return ['link', '/releases/'.tag]
+      return ['link', '/releases/'.tag, '']
     endif
   endif
 
   let sha = gv#sha()
   if !empty(sha)
-    return ['commit', FugitiveFind(sha, b:git_dir)]
+    return ['commit', FugitiveFind(sha, b:git_dir), '']
   endif
-  return [0, 0]
+  return [0, 0, '']
 endfunction
 
 function! s:split(tab) "{{{1
   if a:tab
-    call s:tabnew()
+    -1tabnew
   elseif getwinvar(winnr('$'), 'gv')
     $wincmd w
     enew
