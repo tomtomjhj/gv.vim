@@ -131,10 +131,12 @@ endfunction
 function! s:cmdline_help() "{{{1
   redraw
   if exists('g:gv_file')
-    nnoremap <silent> <buffer> <nowait> d :call gv#sbs#show(0)<cr><c-l>
-    nnoremap <silent> <buffer> <nowait> D :call gv#sbs#show(1)<cr><c-l>
+    nnoremap <silent> <buffer> <nowait> d :-1Gtabedit <C-r>=gv#sha()<CR>:<C-r>=gv_file<CR><cr>:vsplit <C-r>=gv_file<CR><CR>:windo diffthis<cr><C-w>p
+    nnoremap <silent> <buffer> <nowait> s :set lz<cr>:Gvsplit <C-r>=gv#sha()<CR>:<C-r>=gv_file<CR><cr><C-w>L:set nolz<cr>
+    nnoremap <silent> <buffer> <nowait> S :-1Gtabedit <C-r>=gv#sha()<CR>:<C-r>=gv_file<CR><cr><C-w>L
+    nnoremap <silent> <buffer> <nowait> L :call <sid>to_location_list(bufnr(gv_file), 0)<cr><cr>
     echohl Label | echo g:gv_file."\t"
-    echohl None  | echon 'o: open split / O: open tab / q: quit / d: diff / g?: help'
+    echohl None  | echon 'o: open split / O: open tab / s: show revision / S: to tab / d: diff / L: GV? / q: quit / g?: help'
   else
     echo 'o: open split / O: open tab / q: quit / g?: help'
   endif
@@ -250,8 +252,8 @@ function! s:maps(cmd) "{{{1
   nnoremap <silent> <nowait> <buffer>        [          :<c-u>call <sid>folds(0)<cr>
   nnoremap <silent> <nowait> <buffer>        ]          :<c-u>call <sid>folds(1)<cr>
   nnoremap <silent> <nowait> <buffer>        yy         0WW"+ye:echo 'sha' gv#sha() 'copied'<cr>
-  nnoremap <silent> <nowait> <buffer>        i          :<c-u>call <sid>show_summary(1, 0)<cr>
-  nnoremap <silent> <nowait> <buffer>        s          :<c-u>call <sid>show_summary(0, 1)<cr>
+  nnoremap <silent> <nowait> <buffer>        I          :<c-u>call <sid>show_summary(1, 0)<cr>
+  nnoremap <silent> <nowait> <buffer>        i          :<c-u>call <sid>show_summary(0, 1)<cr>
   nnoremap <silent> <nowait> <buffer>        g?         :<c-u>call <sid>show_help()<cr>
 
   nmap              <nowait> <buffer> <C-n> jo
@@ -348,7 +350,7 @@ function! s:show_help() abort "{{{1
   echo '<tab>' . "\t\tchange window"
   echo '<cr>'  . "\t\tshow diff panel"
   echo 'o'     . "\t\tshow diff panel"
-  echo 'O'     . "\t\topen in new tab"
+  echo 'O'     . "\t\topen diff in new tab"
   echo '.'     . "\t\t:Git | sha"
   echo 'R'     . "\t\t:Git rebase -i| sha"
   echo '~'     . "\t\tset gitgutter_diff_base to commit"
@@ -356,11 +358,13 @@ function! s:show_help() abort "{{{1
   echo ']'     . "\t\tnext fold in side window"
   echo 'yy'    . "\t\tcopy commit hash"
   if exists('g:gv_file')
-    echo 'd'   . "\t\tdiff with current"
-    echo 'D'   . "\t\tdiff with current (load all commits)"
+    echo 's'   . "\t\tshow revision"
+    echo 'S'   . "\t\tshow revision in new tab"
+    echo 'd'   . "\t\tdiff with file at HEAD"
+    echo 'L'   . "\t\tdiff with file at HEAD (all commits in location list)"
   endif
-  echo 's'     . "\t\tshow preview panel"
-  echo 'i'     . "\t\tshow preview and diff panels"
+  echo 'i'     . "\t\tshow info panel"
+  echo 'I'     . "\t\tshow info and diff panels"
   echo 'gb'    . "\t\tGbrowse"
   echo '<C-n>' . "\t\topen next"
   echo '<C-p>' . "\t\topen previous"
@@ -406,14 +410,19 @@ function! s:quit() "{{{1
   if s:windows.summary
     pclose!
     let s:windows.summary = 0
-  endif
 
-  if s:windows.diff
+  elseif s:windows.diff
     $wincmd w
     bdelete!
     let s:windows.diff = 0
+
+  elseif winnr() == 1 && winnr('$') > 1
+    $wincmd w
+    bdelete!
+
   else
     bdelete!
+
   endif
 endfunction
 
