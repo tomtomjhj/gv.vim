@@ -43,25 +43,24 @@ From `GV!` and `GV?`, diffs are relative to the tracked file only.
 
 - `g?` for help
 - `o` or `<cr>` on a commit to display the content of it
-- visual `o` or `<cr>` on commits to display the diff in the range
+- _visual_ `o` or `<cr>` on commits to display the diff for the selected range
 - `O` opens a new tab instead
+- `d/D` to diff the revision against `HEAD`
 - `gb` for `:Gbrowse`
 - `Tab` to switch window
 - `j` and `k` to move between commits
 - `.` to start command-line with `:Git [CURSOR] SHA` à la fugitive
 - `~` to set GitGutter diff base to the commit
 - `i` to show the commit info in a preview window
-- `I` to open both summary and diff panels
 - `yy` to copy sha to clipboard
 - `q` or `gq` to close
 
 `GV!`/`GV?` extra mappings:
 
-- `d` to diff the revision in a new tab
-- visual `d` to diff between the revisions in the range
-- `a` to show the revision in a vertical split
-- `A` to show the revision in a new tab
-- `L` like `GV?` for the current file
+- `d` to diff the file at revision in a new tab
+- visual `d` to diff the file between the revisions in the selected range
+- `a` to show the file at revision in a vertical split
+- `A` to show the file at revision in a new tab
 
 From any window (`GV` or `GV!`):
 
