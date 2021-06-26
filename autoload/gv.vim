@@ -208,7 +208,8 @@ function! s:open(visual, tab) "{{{1
   nnoremap <silent> <nowait> <buffer>        <tab>      <c-w><c-h>
   nnoremap <silent> <nowait> <buffer>        [          :<c-u>call <sid>folds(0)<cr>
   nnoremap <silent> <nowait> <buffer>        ]          :<c-u>call <sid>folds(1)<cr>
-  let bang = a:0 ? '!' : ''
+  let b:gv_diff = 1
+  let bang = a:tab ? '!' : ''
   if exists('#User#GV'.bang)
     execute 'doautocmd <nomodeline> User GV'.bang
   endif
@@ -387,7 +388,7 @@ function! s:show_summary(diff, toggle) "{{{1
   let changes = systemlist('git log --stat -1 '.sha)
   let n = len(changes)
   exe n.'new'
-  setlocal bt=nofile bh=wipe noswf nobl
+  call s:scratch()
   silent put =changes
   1d _
   setfiletype git
@@ -429,23 +430,35 @@ function! s:show_help() abort "{{{1
   echo 'O'     . "\t\t[V] open in new tab"
 endfunction
 
+function! s:diff_winnr() "{{{1
+  for w in range(1, winnr('$'))
+    if getbufvar(winbufnr(w), 'gv_diff')
+      return w
+    endif
+  endfor
+  return 0
+endfunction
+
 function! s:folds(down) "{{{1
-  let was_diff_win = s:windows.diff && winnr() == winnr('$')
-  if !s:windows.diff || !was_diff_win && s:windows.diff != line('.')
-    1wincmd w
+  let [was_gv, diff_open] = [&ft == 'GV', s:windows.diff]
+  if was_gv && s:windows.diff != line('.')
     normal o
+    let diff_open = 0
   endif
-  $wincmd w
+  exe s:diff_winnr() . 'wincmd w'
   if &fdm != 'syntax'
     setl fdm=syntax
   endif
-  if a:down
-    silent! normal! zczjzo[z
+  if diff_open
+    if a:down
+      silent! normal! zczjzo[zzt
+    else
+      silent! normal! zczkzo[zzt
+    endif
   else
-    silent! normal! zczkzo[z
+    silent! normal! ggzjzo
   endif
-  silent! exe "normal! z\<cr>"
-  if !was_diff_win
+  if was_gv
     1wincmd w
   endif
 endfunction "}}}
