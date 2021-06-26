@@ -48,7 +48,6 @@ From `GV!` and `GV?`, diffs are relative to the tracked file only.
 - `gb` for `:Gbrowse`
 - `Tab` to switch window
 - `j` and `k` to move between commits
-- `]` and `[` to browse folds in the second window
 - `.` to start command-line with `:Git [CURSOR] SHA` à la fugitive
 - `~` to set GitGutter diff base to the commit
 - `i` to show the commit info in a preview window
@@ -63,6 +62,11 @@ From `GV!` and `GV?`, diffs are relative to the tracked file only.
 - `a` to show the revision in a vertical split
 - `A` to show the revision in a new tab
 - `L` like `GV?` for the current file
+
+From any window (`GV` or `GV!`):
+
+- `]` and `[` to browse folds in the commit/diff window
+- `J` and `K` to move between hunks in the commit window
 
 
 Customization

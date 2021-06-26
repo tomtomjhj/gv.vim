@@ -201,7 +201,11 @@ function! s:open(visual, tab) "{{{1
   elseif type == 'diff'
     call s:fill(target . (exists('g:gv_file') ? ' -- ' . g:gv_file : ''))
     setfiletype git
+    set fdm=syntax
+    normal! ggzx
     let &l:statusline = ' ' . cmd
+    nnoremap <silent> <nowait> <buffer>      J          :<c-u>call <sid>folds(1)<cr>
+    nnoremap <silent> <nowait> <buffer>      K          :<c-u>call <sid>folds(0)<cr>
   endif
   nnoremap <silent> <nowait> <buffer>        q          :call <sid>quit()<cr>
   nnoremap <silent> <nowait> <buffer>        <leader>q  :call <sid>quit()<cr>
@@ -302,6 +306,9 @@ function! s:maps(cmd) "{{{1
   nnoremap <silent> <nowait> <buffer>        g?         :<c-u>call <sid>show_help()<cr>
   nnoremap <silent> <nowait> <buffer>        v          V
   xnoremap <silent> <nowait> <buffer>        v          V
+
+  nnoremap <silent> <nowait> <buffer>        J          :<c-u>call <sid>scroll(1)<cr>
+  nnoremap <silent> <nowait> <buffer>        K          :<c-u>call <sid>scroll(0)<cr>
 
   nmap              <nowait> <buffer> <C-n> jo
   nmap              <nowait> <buffer> <C-p> ko
@@ -437,6 +444,17 @@ function! s:diff_winnr() "{{{1
     endif
   endfor
   return 0
+endfunction
+
+function! s:scroll(down)
+  let w = s:diff_winnr()
+  if w
+    exe w.'wincmd w'
+    call clearmatches()
+    exe "normal"  ( a:down ? "Jzt" : "Kzt" )
+    call matchaddpos('Pmenu', [line('.')])
+    wincmd p
+  endif
 endfunction
 
 function! s:folds(down) "{{{1
