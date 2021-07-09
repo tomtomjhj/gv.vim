@@ -208,7 +208,7 @@ endfunction "}}}
 "------------------------------------------------------------------------------
 
 function! s:scratch() "{{{1
-  setlocal buftype=nofile bufhidden=wipe noswapfile nomodeline
+  setlocal nobuflisted buftype=nofile bufhidden=wipe noswapfile nomodeline
 endfunction
 
 function! s:fill(cmd, ...) "{{{1
@@ -268,19 +268,6 @@ function! s:syntax() "{{{1
   syn match gvDeleted   "^\W*\zsD\t.*"
   hi def link gvAdded    diffAdded
   hi def link gvDeleted  diffRemoved
-
-  syn match diffAdded   "^+.*"
-  syn match diffRemoved "^-.*"
-  syn match diffLine    "^@.*"
-  syn match diffFile    "^diff\>.*"
-  syn match diffFile    "^+++ .*"
-  syn match diffNewFile "^--- .*"
-  hi def link diffFile    Type
-  hi def link diffNewFile diffFile
-  hi def link diffAdded   Identifier
-  hi def link diffRemoved Special
-  hi def link diffFile    Type
-  hi def link diffLine    Statement
 endfunction
 
 function! s:maps(cmd) "{{{1
@@ -445,20 +432,24 @@ function! s:folds(down) "{{{1
   if !s:diff_winnr()
     let s:windows.diff = 0
   endif
-  let [was_gv, diff_open] = [&ft == 'GV', s:windows.diff]
+  let was_gv = &ft == 'GV'
   if was_gv && s:windows.diff != line('.')
     normal o
-    let diff_open = 0
+    return
   endif
   exe s:diff_winnr() . 'wincmd w'
   if &fdm != 'syntax'
     setl fdm=syntax
   endif
-  if diff_open
+  if s:windows.diff
     if a:down
       silent! normal! zczjzo[zzt
     else
+      let pos = getcurpos()
       silent! normal! zczkzo[zzt
+      if pos == getcurpos()
+        normal! ggzm
+      endif
     endif
   else
     silent! normal! ggzjzo

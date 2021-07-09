@@ -77,18 +77,18 @@ endfunction "}}}
 "------------------------------------------------------------------------------
 
 function! s:gs_scratch() "{{{1
-  setlocal buftype=nofile bufhidden=wipe noswapfile nomodeline
+  setlocal nobuflisted buftype=nofile bufhidden=wipe noswapfile nomodeline
 endfunction
 
 function! s:gs_fill(cmd) "{{{1
   setlocal modifiable
   silent put = a:cmd
-  normal! gg"_dd
+  1d_
   setlocal nomodifiable
 endfunction
 
 function! s:gs_syntax() "{{{1
-  setf GV
+  setfiletype GV
   syn clear
   syn match gsSha     /^[a-f0-9]\{6,}/ nextgroup=gsDate
   syn match gsDate    /.\{-}\zestash@/ contained nextgroup=gsStash
@@ -154,7 +154,7 @@ function! s:gs_open(...) "{{{1
   call append("$", '')
   normal! <ipG
   call s:gs_fill(system('git stash show -p '.sha))
-  setf git
+  setfiletype git
   set foldmethod=syntax
   normal! zm
   nnoremap <silent> <nowait> <buffer>        q          :$wincmd w <bar> bdelete!<cr>
@@ -191,6 +191,7 @@ function! s:gs_do(action) "{{{1
       call s:gs_quit()
     endif
   endif
+  silent! GitGutterAll
 endfunction
 
 function! s:gs_to_branch() "{{{1
