@@ -151,7 +151,7 @@ endfunction
 function! s:create_gv_buffer(fugitive_repo, log_opts) "{{{1
   let default_opts = ['--color=never', '--date=short', '--format=%cd %h%d %s (%an)']
   let git_args = ['log'] + default_opts + a:log_opts
-  let git_log_cmd = call(a:fugitive_repo.git_command, git_args, a:fugitive_repo)
+  let git_log_cmd = FugitiveShellCommand(git_args, a:fugitive_repo)
 
   let repo_short_name = fnamemodify(substitute(a:fugitive_repo.dir(), '[\\/]\.git[\\/]\?$', '', ''), ':t')
   let bufname = repo_short_name.' '.join(a:log_opts)
@@ -327,7 +327,7 @@ endfunction "}}}
 "------------------------------------------------------------------------------
 
 function! s:is_tracked(fugitive_repo, file) "{{{1
-  call system(a:fugitive_repo.git_command('ls-files', '--error-unmatch', a:file))
+  call system(FugitiveShellCommand('ls-files', '--error-unmatch', a:file))
   return !v:shell_error
 endfunction
 
@@ -637,7 +637,7 @@ function! s:type(visual) "{{{1
       return [0, 0, '']
     endif
     let statusline = 'git diff ' . shas[-1] . ' ' . shas[0] . s:gv_file(0)
-    return ['diff', fugitive#repo().git_command('diff', shas[-1], shas[0]), statusline]
+    return ['diff', FugitiveShellCommand('diff', shas[-1], shas[0]), statusline]
   endif
 
   if exists('b:git_origin')
