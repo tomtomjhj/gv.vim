@@ -225,7 +225,7 @@ function! s:fill_side_buffer(type, target, statusline) "{{{1
   if a:type == 'commit'
     execute 'e' escape(a:target, ' ')
     set fdm=syntax
-    silent! normal! ggzxzjzo
+    silent! normal! ggzx
     nnoremap <silent> <buffer> gb :GBrowse<cr>
   elseif a:type == 'diff'
     call s:fill(a:target . s:gv_file(1))
