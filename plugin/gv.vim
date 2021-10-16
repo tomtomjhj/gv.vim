@@ -20,9 +20,5 @@
 " OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 " THE SOFTWARE.
 
-function! s:gvcomplete(a, l, p) abort
-  return fugitive#repo().superglob(a:a)
-endfunction
-
-command! -bang -nargs=* -range=0 -complete=customlist,s:gvcomplete GV call gv#start(<bang>0, <count>, <line1>, <line2>, <q-args>)
-command! -bang                                                     GS call gs#start(<bang>0)
+command! -bang -nargs=* -range=0 -complete=customlist,fugitive#LogComplete GV call gv#start(<bang>0, <count>, <line1>, <line2>, <q-args>)
+command! -bang                                                             GS call gs#start(<bang>0)
